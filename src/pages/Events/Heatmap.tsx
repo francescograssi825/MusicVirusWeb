@@ -70,7 +70,7 @@ const Heatmap: React.FC = () => {
     if (!center) return;
 
     const loader = new Loader({
-      apiKey: "AIzaSyBz237WilseCi9Ghn-rENeDSUQtZGVut-s",
+      apiKey: apikeu,
       version: "weekly",
       libraries: ["places", "marker"],
     });
