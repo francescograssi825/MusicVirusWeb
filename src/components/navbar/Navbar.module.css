@@ -1,0 +1,13 @@
+.navbar {
+  background-color: black !important; 
+  color: white !important;
+}
+
+.dropdown {
+  background-color: AliceBlue !important; /* Background nero per evidenziare il dropdown */
+  color: black !important;            /* Testo bianco per garantire un buon contrasto */
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  opacity: 1 !important;              /* Assicura che il dropdown sia completamente opaco */
+}

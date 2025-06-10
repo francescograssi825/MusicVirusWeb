@@ -1,9 +1,9 @@
-
+import styles from "./Pages.module.css"
 
 export default function Empty() {
   return (
-    <div className="container mx-auto p-8">
-      
+    <div className={`${styles.body} container mx-auto p-8`}>
+       
     </div>
   )
 }
