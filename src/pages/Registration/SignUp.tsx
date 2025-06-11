@@ -8,9 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Loader2, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import RestApi from './common/RestApiUtils';
 import defaultAvatar from './common/default-avatar-profile.png';
 import ModalRegistration from './modalRegistration';
+
+const invokeUrl = 'http://localhost:8080';
 
 const SignUpFan: React.FC = () => {
   const navigate = useNavigate();
@@ -48,10 +49,13 @@ const SignUpFan: React.FC = () => {
   useEffect(() => {
     const fetchGenres = async () => {
       try {
-        const genresData = await RestApi.getGenres();
-        setGenres(genresData);
+        const res = await fetch(`${invokeUrl}/api/registration/genres`);
+        const data = await res.json();
+        if (data?.genres) {
+          setGenres(data.genres);
+        }
       } catch (error) {
-        setError(error instanceof Error ? error.message : 'Errore nel caricamento dei generi');
+        setError('Errore nel caricamento dei generi');
       } finally {
         setLoadingGenres(false);
       }
@@ -68,14 +72,19 @@ const SignUpFan: React.FC = () => {
     setError('');
 
     try {
-      const isAvailable = await RestApi.checkUsernameAvailability(username);
-      setUsernameAvailable(isAvailable);
+      const res = await fetch(`${invokeUrl}/api/registration/usernameControl`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim() }),
+      });
+      const avail = await res.json();
+      setUsernameAvailable(avail === true);
 
-      if (!isAvailable) {
+      if (!avail) {
         setError('Username non disponibile');
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Errore nel controllo username');
+      setError('Errore nel controllo username');
       setUsernameAvailable(null);
     } finally {
       setCheckingUsername(false);
@@ -131,24 +140,77 @@ const SignUpFan: React.FC = () => {
 
     setSubmitting(true);
 
+    let imageUrl = 'src/assets/registraz/default-avatar-profile.png'; // URL di default
+
     try {
-      const personalData = {
-        name,
-        surname,
-        email,
-        phone,
-        username,
+      // Se l'utente ha selezionato un'immagine, caricala al backend
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        formData.append('username', username.trim());
+
+        try {
+          const uploadRes = await fetch(`${invokeUrl}/api/registration/api/upload`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!uploadRes.ok) {
+            const errorText = await uploadRes.text();
+            throw new Error(`Errore HTTP ${uploadRes.status}: ${errorText}`);
+          }
+
+          const uploadData = await uploadRes.json();
+          
+          if (uploadData.imageUrl) {
+            imageUrl = uploadData.imageUrl;
+            console.log('Upload completato. URL immagine:', imageUrl);
+          } else {
+            throw new Error('URL immagine non ricevuto dal server');
+          }
+        } catch (uploadError: any) {
+          console.error('Errore durante upload:', uploadError);
+          setError(`Errore upload immagine: ${uploadError.message}`);
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // Preparazione dati per la registrazione
+      const fanDto = {
+        name: name.trim(),
+        surname: surname.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        username: username.trim(),
         password,
-        address
+        address: address.trim(),
+        favouriteGenres: selectedGenres,
+        profileImageUrl: imageUrl, 
       };
 
-      await RestApi.completeRegistration(personalData, selectedGenres, imageFile);
+      console.log('Dati da inviare:', fanDto);
+      console.log('URL immagine finale:', fanDto.profileImageUrl);
+
+      // Invio registrazione
+      const registrationRes = await fetch(`${invokeUrl}/api/registration/fan/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fanDto),
+      });
+
+      const registrationData = await registrationRes.json();
+
+      if (!registrationRes.ok) {
+        throw new Error(registrationData.message || 'Errore sconosciuto');
+      }
 
       // Mostra il modal solo se la registrazione è andata a buon fine
       setShowRegistrationModal(true);
 
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Errore durante la registrazione');
+    } catch (error: any) {
+      console.error('Errore durante registrazione:', error);
+      setError(`Registrazione fallita: ${error.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -366,7 +428,6 @@ const SignUpFan: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-
       {/* Modal di registrazione completata */}
       <ModalRegistration
         showModal={showRegistrationModal}

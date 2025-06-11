@@ -5,8 +5,7 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { Loader2 } from "lucide-react";
-import ForgotPasswordModal from './ForgotPasswordModal'; 
-
+import ForgotPasswordModal from './ForgotPasswordModal';
 import { useAuth } from '../../components/auth/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 
@@ -21,35 +20,36 @@ const Login: React.FC = () => {
   const { login: authLogin } = useAuth();
 
   const userTypeOptions = [
-  {
-    type: 'fan',
-    title: 'Fan',
-    description: 'Discover and support your favorite artists',
-    route: '/fan/signup',
-    icon: '🎵'
-  },
-  {
-    type: 'artist',
-    title: 'Artist',
-    description: 'Share your music and connect with fans',
-    route: '/artist/signup',
-    icon: '🎤'
-  },
-  {
-    type: 'merchant',
-    title: 'Merchant',
-    description: 'Sell merchandise and music products',
-    route: '/merchant/signup',
-    icon: '🛍️'
-  }
-];
-
-const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
+    {
+      type: 'fan',
+      title: 'Fan',
+      description: 'Discover and support your favorite artists',
+      route: '/fan/signup',
+      icon: '🎵'
+    },
+    {
+      type: 'artist',
+      title: 'Artist',
+      description: 'Share your music and connect with fans',
+      route: '/artist/signup',
+      icon: '🎤'
+    },
+    {
+      type: 'merchant',
+      title: 'Merchant',
+      description: 'Sell merchandise and music products',
+      route: '/merchant/signup',
+      icon: '🛍️'
+    }
+  ];
+  
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
 
   const handleUserTypeSelect = (route: string) => {
     setIsSignInModalOpen(false);
     navigate(route);
   };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -66,7 +66,7 @@ const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
     };
 
     try {
-      const response = await fetch(invokeUrl + '/api/login/auth/', {
+      const response = await fetch(`${invokeUrl}/api/login/auth/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,10 +83,13 @@ const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
 
       const data = await response.json();
       const { jwt, role } = data;
+
       if (jwt) {
+        
+
         authLogin({ username, role }, jwt);
         setLoadingLogin(false);
-        navigate('/dash');
+        navigate('/');
       } else {
         setLoadingLogin(false);
         setError('Autenticazione fallita');
@@ -97,132 +100,125 @@ const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
     }
   };
 
-
-
   return (
     <>
-    <section className="min-h-screen flex">
-      {/* Sezione sinistra - Background Image */}
-      <div 
-        className="hidden md:flex md:w-1/2 relative"
-        style={{
-          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("https://images.pexels.com/photos/14870728/pexels-photo-14870728.jpeg?auto=compress&cs=tinysrgb&w=600&lazy=load")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          
-        }}
-      >
-        <div className="absolute inset-0 bg-black/30" />
-      </div>
-
-      {/* Sezione destra - Form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center p-8"
-      style={{ backgroundColor: '#f8f9fa' }}>
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight">
-              RockIn to your account!
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Benvenuto! Accedi al tuo account per continuare
-            </p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-6">
-            {/* Error Message */}
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            {/* Username Field */}
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-lg font-semibold">
-                Username
-              </Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Inserisci username"
-                value={username}
-                onChange={(e: { target: { value: React.SetStateAction<string>; }; }) => setUsername(e.target.value)}
-                required
-                className="h-12 text-base"
-                disabled={loadingLogin}
-              />
-            </div>
-
-            {/* Password Field */}
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-lg font-semibold">
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Digita la tua password"
-                value={password}
-                onChange={(e: { target: { value: React.SetStateAction<string>; }; }) => setPassword(e.target.value)}
-                required
-                className="h-12 text-base"
-                disabled={loadingLogin}
-              />
-            </div>
-
-            {/* Forgot Password Link */}
-            <div className="text-right">
-              <button
-                type="button"
-                className="text-sm text-primary hover:underline"
-                onClick={() => setShowForgotModal(true)}
-              >
-                Hai dimenticato la tua password?
-              </button>
-            </div>
-
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              className="w-full h-12 text-lg"
-              disabled={loadingLogin}
-            >
-              {loadingLogin ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Caricamento...
-                </>
-              ) : (
-                'Login'
-              )}
-            </Button>
-
-            {/* Signup Link */}
-            <div className="text-center">
-              <span className="text-muted-foreground">Non hai un account? </span>
-              <button
-                type="button"
-                className="text-primary hover:underline font-medium"
-                onClick={() => setIsSignInModalOpen(true)}
-              >
-                Registrati!
-              </button>
-            </div>
-          </form>
+      <section className="min-h-screen flex">
+        {/* Sezione sinistra - Background Image */}
+        <div 
+          className="hidden md:flex md:w-1/2 relative"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("https://images.pexels.com/photos/14870728/pexels-photo-14870728.jpeg?auto=compress&cs=tinysrgb&w=600&lazy=load")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          <div className="absolute inset-0 bg-black/30" />
         </div>
-      </div>
 
-      {/* Modals */}
-      <ForgotPasswordModal 
-        show={showForgotModal} 
-        onClose={() => setShowForgotModal(false)} 
-      />
+        {/* Sezione destra - Form */}
+        <div className="w-full md:w-1/2 flex items-center justify-center p-8" style={{ backgroundColor: '#f8f9fa' }}>
+          <div className="w-full max-w-md space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold tracking-tight">
+                RockIn to your account!
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                Benvenuto! Accedi al tuo account per continuare
+              </p>
+            </div>
 
+            <form onSubmit={handleLogin} className="space-y-6">
+              {/* Messaggio di error */}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-      
-    </section>
+              {/* Campo Username */}
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-lg font-semibold">
+                  Username
+                </Label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Inserisci username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className="h-12 text-base"
+                  disabled={loadingLogin}
+                />
+              </div>
 
-    {/* Sign In Modal */}
+              {/* Campo Password */}
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-lg font-semibold">
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Digita la tua password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-12 text-base"
+                  disabled={loadingLogin}
+                />
+              </div>
+
+              {/* Link per Password Dimenticata */}
+              <div className="text-right">
+                <button
+                  type="button"
+                  className="text-sm text-primary hover:underline"
+                  onClick={() => setShowForgotModal(true)}
+                >
+                  Hai dimenticato la tua password?
+                </button>
+              </div>
+
+              {/* Bottone Login */}
+              <Button
+                type="submit"
+                className="w-full h-12 text-lg"
+                disabled={loadingLogin}
+              >
+                {loadingLogin ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Caricamento...
+                  </>
+                ) : (
+                  'Login'
+                )}
+              </Button>
+
+              {/* Link per Registrazione */}
+              <div className="text-center">
+                <span className="text-muted-foreground">Non hai un account? </span>
+                <button
+                  type="button"
+                  className="text-primary hover:underline font-medium"
+                  onClick={() => setIsSignInModalOpen(true)}
+                >
+                  Registrati!
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {/* Modals */}
+        <ForgotPasswordModal 
+          show={showForgotModal} 
+          onClose={() => setShowForgotModal(false)} 
+        />
+      </section>
+
+      {/* Modal per la scelta del tipo di account */}
       <Dialog open={isSignInModalOpen} onOpenChange={setIsSignInModalOpen}>
         <DialogContent className="bg-white">
           <DialogHeader>
@@ -261,8 +257,7 @@ const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
           </div>
         </DialogContent>
       </Dialog>
-
-      </>
+    </>
   );
 };
 

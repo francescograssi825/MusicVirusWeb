@@ -1,3 +1,5 @@
+/// <reference types="google.maps" />
+
 import React, { useEffect, useState, useRef } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
@@ -70,12 +72,12 @@ const Heatmap: React.FC = () => {
     if (!center) return;
 
     const loader = new Loader({
-      apiKey: apikeu,
+      apiKey: "AIzaSyBz237WilseCi9Ghn-rENeDSUQtZGVut-s",
       version: "weekly",
       libraries: ["places", "marker"],
     });
 
-    loader.load().then(async (google) => {
+    loader.load().then(async (google: typeof window.google) => {
       try {
         if (!mapRef.current) {
           mapRef.current = new google.maps.Map(document.getElementById("map") as HTMLElement, {

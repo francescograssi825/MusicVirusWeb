@@ -35,13 +35,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('authToken', token);
     localStorage.setItem('username', userData.username);
     localStorage.setItem('role', userData.role);
+    localStorage.setItem("loggedIn", "true");
+    
   };
 
   const logout = () => {
     setUser(null);
+    localStorage.setItem("loggedIn", "false");
     localStorage.removeItem('authToken');
     localStorage.removeItem('username');
     localStorage.removeItem('role');
+    localStorage.clear(); 
   };
 
   return (

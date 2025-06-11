@@ -1,7 +1,8 @@
 
 @import "tailwindcss";
 
-._body_dcf0c_1 {
+[class^="_body_"],
+[class*=" _body_"] {
   opacity: 1 !important;
 }
 

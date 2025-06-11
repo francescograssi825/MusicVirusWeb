@@ -10,10 +10,18 @@ import {
   Users,
 } from "lucide-react";
 
-export type UserType = "fan" | "artist" | "merchant" | "admin";
+export type UserType = "user" | "artist" | "merchant" | "admin";
 
-//da sostituire con implementazione vera
-export const currentUserType = "fan" as UserType;
+// Recupera il tipo di utente dal localStorage se disponibile
+const storedUserType =
+  typeof localStorage !== "undefined"
+    ? localStorage.getItem("currentUserType")
+    : null;
+
+// Converte in minuscolo il valore preso dal localStorage (in caso esista) oppure utilizza "user" di default
+export const currentUserType: UserType = storedUserType
+  ? (storedUserType.toLowerCase() as UserType)
+  : "user";
 
 // Interfaccia per un menu item
 export interface MenuItem {
@@ -27,7 +35,7 @@ let mainItems: MenuItem[] = [];
 // Array dei menu items per le impostazioni (account)
 let settingsItems: MenuItem[] = [];
 
-if (currentUserType === "fan") {
+if (currentUserType === "user") {
   mainItems = [
     { title: "Home", url: "/", icon: Home },
     { title: "Catalogo Eventi", url: "/events", icon: Calendar },

@@ -1,12 +1,12 @@
-import { Outlet, useLocation } from "react-router-dom"
-import Navbar from "../components/navbar/Navbar"
-import { AppSidebar } from "../components/sidebar/AppSidebar"
+import { Outlet, useLocation } from "react-router-dom";
+import Navbar from "../components/navbar/Navbar";
+import { AppSidebar } from "../components/sidebar/AppSidebar";
 import { 
   SidebarProvider, 
   SidebarInset, 
   SidebarTrigger 
-} from "../components/ui/sidebar"
-import { Separator } from "../components/ui/separator"
+} from "../components/ui/sidebar";
+import { Separator } from "../components/ui/separator";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,13 +14,21 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "../components/ui/breadcrumb"
-import styles from "./Layout.module.css"
+} from "../components/ui/breadcrumb";
+import styles from "./Layout.module.css";
+import { useEffect, useState } from "react";
 
 export default function Layout() {
-  // Simuliamo lo stato di login dell'utente
-  const isUserLoggedIn = true; // Cambia a false per nascondere la sidebar
-  const location = useLocation()
+  const location = useLocation();
+  
+  // Leggi lo stato di login dal local storage all'iniziale e ad ogni cambio di pagina
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(
+    localStorage.getItem("loggedIn") === "true"
+  );
+
+  useEffect(() => {
+    setIsUserLoggedIn(localStorage.getItem("loggedIn") === "true");
+  }, [location]);
 
   // Mappa delle rotte per i nomi delle pagine
   const pageNames: { [key: string]: string } = {
@@ -41,14 +49,12 @@ export default function Layout() {
     '/event-management': 'Gestione Eventi',
     '/user-management': 'Gestione Utenti',
     'settings': 'Impostazioni',
-  }
-
-
+  };
 
   // Ottieni il nome della pagina corrente
   const getCurrentPageName = () => {
-    return pageNames[location.pathname] || 'Dashboard'
-  }
+    return pageNames[location.pathname] || 'Dashboard';
+  };
 
   return (
     <div className={`${styles.body}`}>
@@ -61,7 +67,7 @@ export default function Layout() {
               <header className="flex h-16 shrink-0 items-center gap-2 px-4 bg-white border-b border-gray-200">
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" className="mr-2 h-4" />
-                
+
                 {/* Breadcrumb dinamico */}
                 <Breadcrumb>
                   <BreadcrumbList>
@@ -77,7 +83,7 @@ export default function Layout() {
                   </BreadcrumbList>
                 </Breadcrumb>
               </header>
-              
+
               {/* Contenuto principale */}
               <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
                 <main className="flex-1">
@@ -96,5 +102,5 @@ export default function Layout() {
         )}
       </div>
     </div>
-  )
+  );
 }
