@@ -103,7 +103,8 @@ class RestApiUtilsArtist {
       formData.append('file', imageFile);
       formData.append('username', username.trim());
       
-      const response = await fetch(`${invokeUrl}/api/upload`, { 
+      // CORREZIONE: URL corretto per l'upload
+      const response = await fetch(`${invokeUrl}/api/registration/api/upload`, { 
         method: 'POST', 
         body: formData 
       });
@@ -139,39 +140,59 @@ class RestApiUtilsArtist {
         imageUrl = await this.uploadProfileImage(imageFile, personalData.username);
       }
 
-      // Prepara il DTO per l'artista
+     
       const artistDto = {
         username: personalData.username.trim(),
         bio: personalData.bio,
         email: personalData.email.trim(),
         phone: personalData.phone.trim(),
         password: personalData.password,
-        genres: selectedGenres,
+        
+        genres: selectedGenres, 
+        
         socialNetworks: Object.entries(selectedSocialNetworkProfiles).map(([network, url]) => ({
-          network,
-          profileUrl: url
+          network: network, 
+          profileUrl: url  
         })),
+        
         streamingPlatforms: Object.entries(selectedStreamingPlatformProfiles).map(([platform, url]) => ({
-          platform,
-          profileUrl: url
+          platform: platform, 
+          profileUrl: url     
         })),
-        profileImageUrl: imageUrl,
+        profileImageUrl: imageUrl, 
       };
+
+      console.log('Invio dati al backend:', JSON.stringify(artistDto, null, 2));
 
       // Invia registrazione
       const response = await fetch(`${invokeUrl}/api/registration/artist/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(artistDto),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Errore durante la registrazione');
+        let errorMessage = 'Errore durante la registrazione';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          
+          errorMessage = `Errore HTTP ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
+
+      // Verifica che la risposta sia valida
+      const responseData = await response.json();
+      console.log('Risposta dal backend:', responseData);
 
       // Registrazione completata con successo
     } catch (error) {
+      console.error('Errore nella registrazione:', error);
       throw new Error(error instanceof Error ? error.message : 'Errore durante la registrazione');
     }
   }

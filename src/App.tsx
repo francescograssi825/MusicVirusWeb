@@ -16,6 +16,7 @@ import Catalogo from "./pages/Events/Catalogo"
 import MyEvents from "./pages/sidebar/MyEvents"
 import SavedEvents from "./pages/sidebar/SavedEvents"
 import EventManagement from "./pages/sidebar/EventManagement"
+import ArtistManagement from "./pages/Dashboard/Admin/ArtistManagement"
 
 function App() {
   return (
@@ -70,6 +71,7 @@ function App() {
 
          
           <Route path= "/event-management" element={<EventManagement />} />
+        <Route path= "/artist-management" element={<ArtistManagement />} /> {/* Admin */}
           {/* Route per Admin */}
           {/*
           <Route 

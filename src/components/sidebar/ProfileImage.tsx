@@ -5,6 +5,8 @@ const ProfileImage: React.FC = () => {
   const [profileImgUrl, setProfileImgUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+
+  //l'url cambia in base al tipo di utente, da sitemare
   useEffect(() => {
     fetch(`http://localhost:8081/api/fan/get-image`, {
       method: 'GET',

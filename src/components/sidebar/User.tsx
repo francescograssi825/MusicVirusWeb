@@ -15,13 +15,14 @@ export type UserType = "user" | "artist" | "merchant" | "admin";
 // Recupera il tipo di utente dal localStorage se disponibile
 const storedUserType =
   typeof localStorage !== "undefined"
-    ? localStorage.getItem("currentUserType")
+    ? localStorage.getItem("role")
     : null;
 
 // Converte in minuscolo il valore preso dal localStorage (in caso esista) oppure utilizza "user" di default
 export const currentUserType: UserType = storedUserType
   ? (storedUserType.toLowerCase() as UserType)
   : "user";
+
 
 // Interfaccia per un menu item
 export interface MenuItem {
@@ -65,9 +66,9 @@ if (currentUserType === "user") {
  
 } else if (currentUserType === "admin") {
   mainItems = [
-    { title: "Dashboard", url: "/dashboard", icon: Home },
+    { title: "Dashboard admin", url: "/dashboard", icon: Home },
     { title: "Gestione Eventi", url: "/event-management", icon: Calendar },
-    { title: "Gestione Utenti", url: "/user-management", icon: Users },
+    { title: "Gestione Artisti", url: "/artist-management", icon: Users },
     { title: "Report", url: "/reports", icon: Ticket },
     { title: "Impostazioni", url: "/settings", icon: Settings },
   ];
