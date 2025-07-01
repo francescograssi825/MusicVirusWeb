@@ -5,10 +5,19 @@ const ProfileImage: React.FC = () => {
   const [profileImgUrl, setProfileImgUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const const_url =`http://localhost:808`
 
   //l'url cambia in base al tipo di utente, da sitemare
   useEffect(() => {
-    fetch(`http://localhost:8081/api/fan/get-image`, {
+
+    let url;
+    if(localStorage.getItem('role')==='ARTIST'){
+      url = const_url+`2/api/artist/get-image`;
+    }else {
+      url = const_url+`1/api/fan/get-image`
+    }
+    console.log(url)
+    fetch(url, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem("authToken") || ""}`
@@ -21,8 +30,8 @@ const ProfileImage: React.FC = () => {
         return response.json();
       })
       .then(data => {
-        // Se abbiamo ricevuto un URL valido, lo salviamo; altrimenti rimaniamo null.
-        if (data && data.url) {
+        // Se URL valido, si salva; altrimenti rimaniamo null.
+        if (data && data.url && data.url!=='src/assets/registraz/default-avatar-profile.png') {
           localStorage.setItem("profileImage", data.url);
           setProfileImgUrl(data.url);
         } else {

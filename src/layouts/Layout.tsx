@@ -35,7 +35,7 @@ export default function Layout() {
     '/dashboard': 'Dashboard',
     '/': 'Home',
     '/events': 'Catalogo Eventi',
-    '/my-events': 'I Miei Eventi',
+    '/artist/my-events': 'I Miei Eventi',
     '/saved-events': 'Eventi Salvati',
     '/tickets': 'Biglietti',
     '/followed-artists': 'Artisti Seguiti',
@@ -48,6 +48,9 @@ export default function Layout() {
     '/reports': 'Report',
     '/event-management': 'Gestione Eventi',
     '/user-management': 'Gestione Utenti',
+    'merchant-management':'Gestione Esercenti',
+    '/new-event' : 'Crea Evento',
+    'event-request': 'Richieste',
     'settings': 'Impostazioni',
   };
 

@@ -1,6 +1,4 @@
-import { type Genre } from './Types';
-
-const BASE_URL =  'http://localhost:8080';
+const BASE_URL = 'http://localhost:8080';
 
 interface SocialNetwork {
   platformName: string;
@@ -10,42 +8,50 @@ interface SocialNetwork {
   name: string | null;
 }
 
-interface MerchantBusinessData {
-  businessName: string;
-  description: string;
-  email: string;
-  phone: string;
+interface MerchantRegistrationData {
+  username: string;
+  merchantSurname: string;
+  merchantName: string;
+  merchantDescription: string;
+  merchantEmail: string;
+  merchantPhone: string;
   password: string;
-  address: string;
-  city: string;
+  merchantAddress: string;
   website?: string;
+  socialNetworks: Array<{
+    platform: string;
+    profileUrl: string;
+  }>;
+  imageUrl?: string;
+}
+
+interface MerchantBusinessData {
+  username?: string;
+  merchantSurname?: string;
+  merchantName?: string;
+  merchantDescription?: string;
+  merchantEmail?: string;
+  merchantPhone?: string;
+  merchantAddress?: string;
+  website?: string;
+  socialNetworks?: Array<{
+    platform: string;
+    profileUrl: string;
+  }>;
+  profileImageUrl?: string;
+  // Add other fields as needed
 }
 
 class RestApiUtilsMerchant {
-  
-
   /**
-   * Ottiene tutti i generi musicali disponibili
+   * Gestisce le risposte fetch, lanciando errori per risposte non OK e analizzando JSON.
    */
-  static async getGenres(): Promise<Genre[]> {
-    try {
-      const response = await fetch(`${BASE_URL}/api/genres`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Errore nel caricamento dei generi:', error);
-      throw new Error('Impossibile caricare i generi musicali');
+  private static async handleResponse<T>(response: Response): Promise<T> {
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
+    return response.json() as Promise<T>;
   }
 
   /**
@@ -53,19 +59,15 @@ class RestApiUtilsMerchant {
    */
   static async getSocialNetworks(): Promise<SocialNetwork[]> {
     try {
-      const response = await fetch(`${BASE_URL}/api/social-networks`, {
+      const response = await fetch(`${BASE_URL}/api/registration/social`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
+      const data = await this.handleResponse<{ socials: SocialNetwork[] }>(response);
+      return data.socials;
     } catch (error) {
       console.error('Errore nel caricamento dei social network:', error);
       throw new Error('Impossibile caricare i social network');
@@ -77,44 +79,39 @@ class RestApiUtilsMerchant {
    */
   static async checkBusinessNameAvailability(businessName: string): Promise<boolean> {
     try {
-      const response = await fetch(`${BASE_URL}/api/merchants/check-business-name`, {
+      const response = await fetch(`${BASE_URL}/api/registration/usernameControl`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ businessName }),
+        body: JSON.stringify({ username: businessName.trim() }),
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.available;
+      
+      const result = await this.handleResponse<boolean>(response);
+      return result;
     } catch (error) {
-      console.error('Errore nel controllo disponibilità nome business:', error);
-      throw new Error('Impossibile verificare la disponibilità del nome business');
+      console.error('Errore nel controllo username:', error);
+      throw new Error('Errore nel controllo della disponibilità dell\'username');
     }
   }
 
   /**
    * Carica un'immagine sul server
+   * FIXED: Corretti endpoint e parametri
    */
-  private static async uploadImage(imageFile: File): Promise<string> {
+  private static async uploadImage(imageFile: File, username: string): Promise<string> {
     try {
       const formData = new FormData();
-      formData.append('image', imageFile);
+      formData.append('file', imageFile); // Cambiato da 'image' a 'file'
+      formData.append('username', username); // Aggiunto parametro username richiesto
 
-      const response = await fetch(`${BASE_URL}/api/upload/image`, {
+      // FIXED: Corretti l'endpoint (rimosso 'api' duplicato)
+      const response = await fetch(`${BASE_URL}/api/registration/api/upload`, {
         method: 'POST',
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await this.handleResponse<{ imageUrl: string }>(response);
       return data.imageUrl;
     } catch (error) {
       console.error('Errore nel caricamento immagine:', error);
@@ -124,37 +121,21 @@ class RestApiUtilsMerchant {
 
   /**
    * Completa la registrazione del merchant
+   * FIXED: Passa username per upload immagine
    */
   static async completeMerchantRegistration(
-    businessData: MerchantBusinessData,
-    selectedGenres: string[],
-    socialNetworkProfiles: { [key: string]: string },
+    registrationData: MerchantRegistrationData,
     imageFile: File | null
   ): Promise<void> {
     try {
-      let imageUrl = null;
-
       // Carica l'immagine se presente
       if (imageFile) {
-        imageUrl = await this.uploadImage(imageFile);
+        // FIXED: Passa username per l'upload
+        registrationData.imageUrl = await this.uploadImage(imageFile, registrationData.username);
       }
 
-      // Prepara i dati per la registrazione
-      const registrationData = {
-        businessData: {
-          ...businessData,
-          profileImageUrl: imageUrl,
-        },
-        genres: selectedGenres,
-        socialNetworks: Object.entries(socialNetworkProfiles)
-          .filter(([_, url]) => url.trim() !== '')
-          .map(([platform, url]) => ({
-            platform,
-            profileUrl: url,
-          })),
-      };
-
-      const response = await fetch(`${BASE_URL}/api/merchants/register`, {
+      // Invia i dati di registrazione
+      const response = await fetch(`${BASE_URL}/api/registration/merchant/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,13 +143,8 @@ class RestApiUtilsMerchant {
         body: JSON.stringify(registrationData),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Registrazione merchant completata:', data);
+      await this.handleResponse(response);
+      console.log('Registrazione merchant completata');
     } catch (error) {
       console.error('Errore nella registrazione merchant:', error);
       throw new Error(
@@ -192,11 +168,7 @@ class RestApiUtilsMerchant {
         body: JSON.stringify({ email }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await this.handleResponse<{ available: boolean }>(response);
       return data.available;
     } catch (error) {
       console.error('Errore nel controllo disponibilità email:', error);
@@ -216,11 +188,7 @@ class RestApiUtilsMerchant {
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await this.handleResponse<{ cities: string[] }>(response);
       return data.cities;
     } catch (error) {
       console.error('Errore nella ricerca città:', error);
@@ -241,12 +209,7 @@ class RestApiUtilsMerchant {
         body: JSON.stringify({ address, city }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.handleResponse(response);
     } catch (error) {
       console.error('Errore nella validazione indirizzo:', error);
       return { valid: false };
@@ -265,12 +228,7 @@ class RestApiUtilsMerchant {
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.handleResponse(response);
     } catch (error) {
       console.error('Errore nel caricamento merchant:', error);
       throw new Error('Impossibile caricare i dati del merchant');
@@ -279,18 +237,21 @@ class RestApiUtilsMerchant {
 
   /**
    * Aggiorna i dati di un merchant
+   * FIXED: Pass username for image upload
    */
   static async updateMerchant(
     merchantId: string, 
     updateData: Partial<MerchantBusinessData>,
-    newImageFile?: File | null
+    newImageFile?: File | null,
+    username?: string
   ): Promise<void> {
     try {
       let imageUrl = null;
 
       // Carica nuova immagine se presente
-      if (newImageFile) {
-        imageUrl = await this.uploadImage(newImageFile);
+      if (newImageFile && username) {
+        // FIXED: Passa username per l'upload
+        imageUrl = await this.uploadImage(newImageFile, username);
       }
 
       const response = await fetch(`${BASE_URL}/api/merchants/${merchantId}`, {
@@ -304,13 +265,8 @@ class RestApiUtilsMerchant {
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Merchant aggiornato:', data);
+      await this.handleResponse(response);
+      console.log('Merchant aggiornato con successo');
     } catch (error) {
       console.error('Errore nell\'aggiornamento merchant:', error);
       throw new Error(

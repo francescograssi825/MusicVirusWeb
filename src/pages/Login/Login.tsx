@@ -51,54 +51,84 @@ const Login: React.FC = () => {
   };
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!username || !password) {
-      setError('Inserire username e password');
+  if (!username || !password) {
+    setError('Inserire username e password');
+    return;
+  }
+
+  setLoadingLogin(true);
+  setError(''); // Clear previous errors
+
+  const userDto = {
+    username: username.trim(),
+    password: password,
+  };
+
+  try {
+    const response = await fetch(`${invokeUrl}/api/login/auth/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userDto),
+    });
+
+    // Handle non-2xx responses
+    if (!response.ok) {
+      try {
+        const errorData = await response.json();
+        // Use the server's error message if available, otherwise use a default based on status
+        const errorMessage = errorData?.message || getDefaultErrorMessage(response.status);
+        setError(errorMessage);
+      } catch (parseError) {
+        // If we can't parse the error response, use a generic message
+        setError(getDefaultErrorMessage(response.status));
+      }
+      setLoadingLogin(false);
       return;
     }
 
-    setLoadingLogin(true);
+    // Handle successful response
+    const data = await response.json();
+    const { jwt, role } = data;
 
-    const userDto = {
-      username: username.trim(),
-      password: password,
-    };
-
-    try {
-      const response = await fetch(`${invokeUrl}/api/login/auth/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userDto),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData?.message || 'Credenziali non valide');
-        setLoadingLogin(false);
-        return;
-      }
-
-      const data = await response.json();
-      const { jwt, role } = data;
-
-      if (jwt) {
-        
-
-        authLogin({ username, role }, jwt);
-        setLoadingLogin(false);
-        navigate('/');
-      } else {
-        setLoadingLogin(false);
-        setError('Autenticazione fallita');
-      }
-    } catch (error) {
+    if (jwt) {
+      authLogin({ username, role }, jwt);
       setLoadingLogin(false);
-      setError('Errore nella chiamata API');
+      navigate('/');
+      window.location.reload();
+      
+    } else {
+      setLoadingLogin(false);
+      setError('Autenticazione fallita: token non ricevuto');
     }
-  };
+  } catch (error) {
+    setLoadingLogin(false);
+    // Network error or other fetch-related error
+    console.error('Login error:', error);
+    setError('Errore di connessione. Verifica la tua connessione internet e riprova.');
+  }
+};
+
+// Helper function to provide default error messages based on HTTP status codes
+const getDefaultErrorMessage = (status: number): string => {
+  switch (status) {
+    case 400:
+      return 'Dati di login non validi';
+    case 401:
+      return 'Credenziali non valide';
+    case 403:
+      return 'Accesso negato';
+    case 500:
+      return 'Errore del server. Riprova più tardi.';
+    case 503:
+      return 'Servizio temporaneamente non disponibile';
+    default:
+      return `Errore del server (${status}). Riprova più tardi.`;
+  }
+};
 
   return (
     <>

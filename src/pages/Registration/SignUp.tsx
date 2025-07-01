@@ -164,7 +164,7 @@ const SignUpFan: React.FC = () => {
           
           if (uploadData.imageUrl) {
             imageUrl = uploadData.imageUrl;
-            console.log('Upload completato. URL immagine:', imageUrl);
+            //console.log('Upload completato. URL immagine:', imageUrl);
           } else {
             throw new Error('URL immagine non ricevuto dal server');
           }
@@ -189,8 +189,8 @@ const SignUpFan: React.FC = () => {
         profileImageUrl: imageUrl, 
       };
 
-      console.log('Dati da inviare:', fanDto);
-      console.log('URL immagine finale:', fanDto.profileImageUrl);
+     // console.log('Dati da inviare:', fanDto);
+      //console.log('URL immagine finale:', fanDto.profileImageUrl);
 
       // Invio registrazione
       const registrationRes = await fetch(`${invokeUrl}/api/registration/fan/`, {

@@ -8,6 +8,9 @@ import {
   Heart,
   Ticket,
   Users,
+  Plus,
+  Building2,
+  CalendarSync 
 } from "lucide-react";
 
 export type UserType = "user" | "artist" | "merchant" | "admin";
@@ -22,6 +25,8 @@ const storedUserType =
 export const currentUserType: UserType = storedUserType
   ? (storedUserType.toLowerCase() as UserType)
   : "user";
+
+
 
 
 // Interfaccia per un menu item
@@ -49,8 +54,8 @@ if (currentUserType === "user") {
 } else if (currentUserType === "artist") {
   mainItems = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
-    { title: "I Miei Eventi", url: "/my-events", icon: Calendar },
-    { title: "Biglietti", url: "/tickets", icon: Ticket },
+    { title: "I Miei Eventi", url: "/artist/my-events", icon: Calendar },
+    { title: "Crea Evento", url: "/new-event", icon: Plus },
     { title: "I Miei Fan", url: "/my-fans", icon: Users },
     { title: "Nuove Uscite", url: "/new-releases", icon: Music },
   ];
@@ -59,6 +64,7 @@ if (currentUserType === "user") {
   mainItems = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
     { title: "I Miei Eventi", url: "/my-events", icon: Calendar },
+    { title: "Richieste", url: "/event-request", icon: CalendarSync },
     { title: "Biglietti", url: "/tickets", icon: Ticket },
     { title: "Vendite", url: "/sales", icon: Heart },
     { title: "Report", url: "/reports", icon: Users },
@@ -69,6 +75,7 @@ if (currentUserType === "user") {
     { title: "Dashboard admin", url: "/dashboard", icon: Home },
     { title: "Gestione Eventi", url: "/event-management", icon: Calendar },
     { title: "Gestione Artisti", url: "/artist-management", icon: Users },
+    { title: "Gestione Esercenti", url: "/merchant-management", icon: Building2},
     { title: "Report", url: "/reports", icon: Ticket },
     { title: "Impostazioni", url: "/settings", icon: Settings },
   ];

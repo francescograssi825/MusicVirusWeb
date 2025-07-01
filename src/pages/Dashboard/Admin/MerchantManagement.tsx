@@ -4,37 +4,25 @@ import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { Alert, AlertDescription } from '../../../components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../../components/ui/alert-dialog';
-import { Loader2, User, Mail, Phone, Globe, Music, Filter, ChevronDown, X, Shield } from 'lucide-react';
+import { Loader2, User, Mail, Phone, MapPin, Info, Filter, ChevronDown, X, Shield, Check, Ban } from 'lucide-react';
 
 // Types
-interface SocialNetwork {
-  network: string;
-  profileUrl: string;
-}
-
-interface StreamingPlatform {
-  platform: string;
-  profileUrl: string;
-  platformName: string;
-}
-
-interface Artist {
-  username: string;
+interface Merchant {
   id: string;
-  socialNetworks: SocialNetwork[];
-  streamingPlatforms: StreamingPlatform[];
-  genres: string[];
-  bio: string;
-  email: string;
-  phone: string;
-  password: string | null;
+  merchantName: string;
+  merchantSurname: string;
+  username: string;
+  merchantAddress: string;
+  merchantEmail: string;
+  merchantPhone: string;
+  merchantDescription: string;
   role: string;
   state: string;
-  profileImageUrl: string;
+  imageUrl: string | null;
 }
 
-interface ListArtistDto {
-  artists: Artist[];
+interface ListMerchantDto {
+  merchantDtoList: Merchant[];
 }
 
 // State enum mapping
@@ -173,14 +161,14 @@ const StateFilter: React.FC<{
   );
 };
 
-// Artist Card Component
-const ArtistCard: React.FC<{
-  artist: Artist;
+// Merchant Card Component
+const MerchantCard: React.FC<{
+  merchant: Merchant;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   onBlock: (id: string) => void;
   isProcessing: boolean;
-}> = ({ artist, onApprove, onReject, onBlock, isProcessing }) => {
+}> = ({ merchant, onApprove, onReject, onBlock, isProcessing }) => {
   const renderActionButtons = () => {
     const baseButtonClass = "flex-1 opacity-100";
     const processingElement = (
@@ -190,19 +178,19 @@ const ArtistCard: React.FC<{
       </>
     );
 
-    switch (artist.state) {
+    switch (merchant.state) {
       case 'PENDING_APPROVAL':
         return (
           <>
             <Button
-              onClick={() => onApprove(artist.id)}
+              onClick={() => onApprove(merchant.id)}
               disabled={isProcessing}
               className={`${baseButtonClass} bg-green-600 hover:bg-green-700 text-white`}
             >
               {isProcessing ? processingElement : 'Approva'}
             </Button>
             <Button
-              onClick={() => onReject(artist.id)}
+              onClick={() => onReject(merchant.id)}
               disabled={isProcessing}
               variant="destructive"
               className={`${baseButtonClass} bg-red-600 hover:bg-red-700 text-white`}
@@ -215,7 +203,7 @@ const ArtistCard: React.FC<{
       case 'ACTIVE':
         return (
           <Button
-            onClick={() => onBlock(artist.id)}
+            onClick={() => onBlock(merchant.id)}
             disabled={isProcessing}
             className={`${baseButtonClass} bg-orange-600 hover:bg-orange-700 text-white`}
           >
@@ -236,7 +224,7 @@ const ArtistCard: React.FC<{
       case 'BLOCKED':
         return (
           <Button
-            onClick={() => onApprove(artist.id)}
+            onClick={() => onApprove(merchant.id)}
             disabled={isProcessing}
             className={`${baseButtonClass} bg-green-600 hover:bg-green-700 text-white`}
           >
@@ -247,7 +235,7 @@ const ArtistCard: React.FC<{
       case 'REJECTED':
         return (
           <Button
-            onClick={() => onApprove(artist.id)}
+            onClick={() => onApprove(merchant.id)}
             disabled={isProcessing}
             className={`${baseButtonClass} bg-green-600 hover:bg-green-700 text-white`}
           >
@@ -268,18 +256,26 @@ const ArtistCard: React.FC<{
     <Card className="w-full bg-white opacity-100 shadow-lg hover:shadow-xl transition-shadow">
       <CardHeader className="bg-gray-50 opacity-100">
         <div className="flex items-center space-x-4">
-          <img
-            src={artist.profileImageUrl}
-            alt={artist.username}
-            className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
-          />
+          {merchant.imageUrl ? (
+            <img
+              src={merchant.imageUrl}
+              alt={merchant.merchantName}
+              className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+            />
+          ) : (
+            <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 flex items-center justify-center">
+              <User className="h-8 w-8 text-gray-400" />
+            </div>
+          )}
           <div className="flex-1">
-            <CardTitle className="text-xl text-gray-900">{artist.username}</CardTitle>
+            <CardTitle className="text-xl text-gray-900">
+              {merchant.merchantName} {merchant.merchantSurname}
+            </CardTitle>
             <Badge 
               variant="outline" 
-              className={`mt-1 ${STATE_COLORS[artist.state as keyof typeof STATE_COLORS]}`}
+              className={`mt-1 ${STATE_COLORS[merchant.state as keyof typeof STATE_COLORS]}`}
             >
-              {STATE_LABELS[artist.state as keyof typeof STATE_LABELS] || artist.state}
+              {STATE_LABELS[merchant.state as keyof typeof STATE_LABELS] || merchant.state}
             </Badge>
           </div>
         </div>
@@ -291,80 +287,39 @@ const ArtistCard: React.FC<{
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center space-x-2">
               <Mail className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-700">{artist.email}</span>
+              <span className="text-sm text-gray-700">{merchant.merchantEmail}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Phone className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-700">{artist.phone}</span>
+              <span className="text-sm text-gray-700">{merchant.merchantPhone}</span>
             </div>
           </div>
 
-          {/* Bio */}
+          {/* Address */}
           <div className="space-y-2">
-            <h4 className="font-medium text-gray-900">Bio</h4>
+            <h4 className="font-medium text-gray-900">Indirizzo</h4>
+            <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-md opacity-100">
+              <MapPin className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-700">{merchant.merchantAddress}</span>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <h4 className="font-medium text-gray-900">Descrizione</h4>
             <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md opacity-100">
-              {artist.bio}
+              {merchant.merchantDescription}
             </p>
           </div>
 
-          {/* Genres */}
+          {/* Username */}
           <div className="space-y-2">
-            <h4 className="font-medium text-gray-900">Generi</h4>
-            <div className="flex flex-wrap gap-2">
-              {artist.genres.map((genre, index) => (
-                <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-800">
-                  <Music className="h-3 w-3 mr-1" />
-                  {genre.toLowerCase()}
-                </Badge>
-              ))}
+            <h4 className="font-medium text-gray-900">Nome Locale</h4>
+            <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-md opacity-100">
+              <User className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-700">{merchant.username}</span>
             </div>
           </div>
-
-          {/* Social Networks */}
-          {artist.socialNetworks.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="font-medium text-gray-900">Social Networks</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {artist.socialNetworks.map((social, index) => (
-                  <div key={index} className="flex items-center space-x-2 bg-gray-50 p-2 rounded-md opacity-100">
-                    <Globe className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">{social.network}</span>
-                    <a 
-                      href={social.profileUrl.startsWith('http') ? social.profileUrl : `https://${social.profileUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:text-blue-800 truncate"
-                    >
-                      {social.profileUrl}
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Streaming Platforms */}
-          {artist.streamingPlatforms.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="font-medium text-gray-900">Piattaforme Streaming</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {artist.streamingPlatforms.map((platform, index) => (
-                  <div key={index} className="flex items-center space-x-2 bg-gray-50 p-2 rounded-md opacity-100">
-                    <Music className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">{platform.platformName}</span>
-                    <a 
-                      href={platform.profileUrl.startsWith('http') ? platform.profileUrl : `https://${platform.profileUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:text-blue-800 truncate"
-                    >
-                      {platform.profileUrl}
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Action Buttons */}
           <div className="flex space-x-3 pt-4 border-t">
@@ -377,9 +332,9 @@ const ArtistCard: React.FC<{
 };
 
 // Main Component
-const ArtistManagement: React.FC = () => {
-  const [allArtists, setAllArtists] = useState<Artist[]>([]);
-  const [filteredArtists, setFilteredArtists] = useState<Artist[]>([]);
+const MerchantManagement: React.FC = () => {
+  const [allMerchants, setAllMerchants] = useState<Merchant[]>([]);
+  const [filteredMerchants, setFilteredMerchants] = useState<Merchant[]>([]);
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
@@ -397,19 +352,19 @@ const ArtistManagement: React.FC = () => {
   // Apply filters
   useEffect(() => {
     if (selectedStates.length === 0) {
-      setFilteredArtists(allArtists);
+      setFilteredMerchants(allMerchants);
     } else {
-      setFilteredArtists(allArtists.filter(artist => selectedStates.includes(artist.state)));
+      setFilteredMerchants(allMerchants.filter(merchant => selectedStates.includes(merchant.state)));
     }
-  }, [allArtists, selectedStates]);
+  }, [allMerchants, selectedStates]);
 
-  // Fetch all artists
-  const fetchArtists = async () => {
+  // Fetch all merchants
+  const fetchMerchants = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('authToken') || '';
       
-      const response = await fetch('http://localhost:8082/api/admin/getArtists', {
+      const response = await fetch('http://localhost:8084/api/admin/get-merchants', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -421,11 +376,11 @@ const ArtistManagement: React.FC = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: ListArtistDto = await response.json();
-      setAllArtists(data.artists);
+      const data: ListMerchantDto = await response.json();
+      setAllMerchants(data.merchantDtoList);
       setError(null);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Errore durante il caricamento degli artisti';
+      const errorMessage = err instanceof Error ? err.message : 'Errore durante il caricamento dei merchant';
       setError(errorMessage);
       setAlertModal({
         isOpen: true,
@@ -437,28 +392,28 @@ const ArtistManagement: React.FC = () => {
     }
   };
 
-  // Handle approve/unblock/reactivate artist
-  const handleApprove = async (artistId: string) => {
-    setProcessingIds(prev => new Set(prev).add(artistId));
+  // Handle merchant state change
+  const handleStateChange = async (merchantId: string, newState: string, merchantUsername:string) => {
+    setProcessingIds(prev => new Set(prev).add(merchantId));
     
     try {
       const token = localStorage.getItem('authToken') || '';
-      const artist = allArtists.find(a => a.id === artistId);
+      const merchant = allMerchants.find(m => m.id === merchantId);
       
-      if (!artist) {
-        throw new Error('Artista non trovato');
+      if (!merchant) {
+        throw new Error('Merchant non trovato');
       }
 
-      const response = await fetch('http://localhost:8082/api/admin/acceptArtist', {
+      const response = await fetch('http://localhost:8084/api/admin/accept-merchant', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          artistUsername: artist.username,
-          artistId: artistId,
-          state: "ACTIVE"
+          merchantId: merchantId,
+          state: newState,
+          merchantUsername: merchantUsername,
         })
       });
 
@@ -467,9 +422,9 @@ const ArtistManagement: React.FC = () => {
         throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
-      // Update artist state in the list
-      setAllArtists(prev => prev.map(a => 
-        a.id === artistId ? { ...a, state: 'ACTIVE' } : a
+      // Update merchant state in the list
+      setAllMerchants(prev => prev.map(m => 
+        m.id === merchantId ? { ...m, state: newState } : m
       ));
       
     } catch (err) {
@@ -482,117 +437,30 @@ const ArtistManagement: React.FC = () => {
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);
-        newSet.delete(artistId);
+        newSet.delete(merchantId);
         return newSet;
       });
     }
   };
 
-  // Handle reject artist
-  const handleReject = async (artistId: string) => {
-    setProcessingIds(prev => new Set(prev).add(artistId));
-    
-    try {
-      const token = localStorage.getItem('authToken') || '';
-      const artist = allArtists.find(a => a.id === artistId);
-      
-      if (!artist) {
-        throw new Error('Artista non trovato');
-      }
-
-      const response = await fetch('http://localhost:8082/api/admin/acceptArtist', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          artistUsername: artist.username,
-          artistId: artistId,
-          state: "REJECTED"
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-      }
-
-      // Update artist state in the list
-      setAllArtists(prev => prev.map(a => 
-        a.id === artistId ? { ...a, state: 'REJECTED' } : a
-      ));
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Errore sconosciuto';
-      setAlertModal({
-        isOpen: true,
-        title: 'Errore Rifiuto',
-        message: errorMessage
-      });
-    } finally {
-      setProcessingIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(artistId);
-        return newSet;
-      });
-    }
+  // Handle approve/unblock/reactivate merchant
+  const handleApprove = (merchantId: string, merchantUsername: string) => {
+    handleStateChange(merchantId, 'ACTIVE', merchantUsername);
   };
 
-  // Handle block artist
-  const handleBlock = async (artistId: string) => {
-    setProcessingIds(prev => new Set(prev).add(artistId));
-    
-    try {
-      const token = localStorage.getItem('authToken') || '';
-      const artist = allArtists.find(a => a.id === artistId);
-      
-      if (!artist) {
-        throw new Error('Artista non trovato');
-      }
+  // Handle reject merchant
+  const handleReject = (merchantId: string, merchantUsername:string) => {
+    handleStateChange(merchantId, 'REJECTED', merchantUsername);
+  };
 
-      const response = await fetch('http://localhost:8082/api/admin/acceptArtist', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          artistUsername: artist.username,
-          artistId: artistId,
-          state: "BLOCKED"
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-      }
-
-      // Update artist state in the list
-      setAllArtists(prev => prev.map(a => 
-        a.id === artistId ? { ...a, state: 'BLOCKED' } : a
-      ));
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Errore sconosciuto';
-      setAlertModal({
-        isOpen: true,
-        title: 'Errore Blocco',
-        message: errorMessage
-      });
-    } finally {
-      setProcessingIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(artistId);
-        return newSet;
-      });
-    }
+  // Handle block merchant
+  const handleBlock = (merchantId: string, merchantUsername: string) => {
+    handleStateChange(merchantId, 'BLOCKED', merchantUsername);
   };
 
   // Load data on component mount
   useEffect(() => {
-    fetchArtists();
+    fetchMerchants();
   }, []);
 
   if (loading) {
@@ -600,7 +468,7 @@ const ArtistManagement: React.FC = () => {
       <div className="min-h-screen bg-gray-100 opacity-100 flex items-center justify-center">
         <div className="text-center bg-white p-8 rounded-lg shadow-md opacity-100">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600 mb-4" />
-          <p className="text-gray-600">Caricamento artisti...</p>
+          <p className="text-gray-600">Caricamento merchant...</p>
         </div>
       </div>
     );
@@ -610,8 +478,8 @@ const ArtistManagement: React.FC = () => {
     <div className="min-h-screen bg-gray-100 opacity-100 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestione Artisti</h1>
-          <p className="text-gray-600">Gestisci tutti gli artisti del sistema</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestione Merchant</h1>
+          <p className="text-gray-600">Gestisci tutti i merchant del sistema</p>
         </div>
 
         {error && !alertModal.isOpen && (
@@ -642,7 +510,7 @@ const ArtistManagement: React.FC = () => {
               </Button>
             )}
             <Button 
-              onClick={fetchArtists}
+              onClick={fetchMerchants}
               variant="outline"
               className="bg-white opacity-100"
             >
@@ -651,17 +519,17 @@ const ArtistManagement: React.FC = () => {
           </div>
         </div>
 
-        {filteredArtists.length === 0 ? (
+        {filteredMerchants.length === 0 ? (
           <Card className="text-center py-12 bg-white opacity-100">
             <CardContent>
               <User className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {selectedStates.length > 0 ? 'Nessun artista trovato' : 'Nessun artista presente'}
+                {selectedStates.length > 0 ? 'Nessun merchant trovato' : 'Nessun merchant presente'}
               </h3>
               <p className="text-gray-500">
                 {selectedStates.length > 0 
-                  ? 'Non ci sono artisti che corrispondono ai filtri selezionati.'
-                  : 'Non ci sono artisti registrati nel sistema al momento.'
+                  ? 'Non ci sono merchant che corrispondono ai filtri selezionati.'
+                  : 'Non ci sono merchant registrati nel sistema al momento.'
                 }
               </p>
             </CardContent>
@@ -670,20 +538,20 @@ const ArtistManagement: React.FC = () => {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <p className="text-gray-600">
-                {filteredArtists.length} {filteredArtists.length === 1 ? 'artista' : 'artisti'}
-                {selectedStates.length > 0 && ` (filtrati da ${allArtists.length} totali)`}
+                {filteredMerchants.length} {filteredMerchants.length === 1 ? 'merchant' : 'merchant'}
+                {selectedStates.length > 0 && ` (filtrati da ${allMerchants.length} totali)`}
               </p>
             </div>
             
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {filteredArtists.map((artist) => (
-                <ArtistCard
-                  key={artist.id}
-                  artist={artist}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
-                  onBlock={handleBlock}
-                  isProcessing={processingIds.has(artist.id)}
+              {filteredMerchants.map((merchant) => (
+                <MerchantCard
+                  key={merchant.id}
+                  merchant={merchant}
+                  onApprove={() => handleApprove(merchant.id, merchant.username)}
+                  onReject={() => handleReject(merchant.id, merchant.username)}
+                  onBlock={() => handleBlock(merchant.id, merchant.username)}
+                  isProcessing={processingIds.has(merchant.id)}
                 />
               ))}
             </div>
@@ -701,4 +569,4 @@ const ArtistManagement: React.FC = () => {
   );
 };
 
-export default ArtistManagement;
+export default MerchantManagement;

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, type JSX } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { type Genre, getGenreIcon, getContrastingTextColor } from './common/Types';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
@@ -12,6 +11,13 @@ import { cn } from '../../lib/utils';
 import RestApiUtilsMerchant from './common/RestApiUtilsMerchant';
 import defaultAvatar from './common/default-avatar-profile.png';
 import ModalRegistration from './modalRegistration';
+import { getContrastingTextColor } from './common/Types';
+
+declare global {
+    interface Window {
+        google: any;
+    }
+}
 
 interface SocialNetwork {
     platformName: string;
@@ -25,19 +31,21 @@ const SignUpMerchant: React.FC = () => {
     const navigate = useNavigate();
 
     // Campi base per il merchant
+    const [username, setUsername] = useState('');
+    const [surname, setSurname] = useState('');
     const [businessName, setBusinessName] = useState('');
     const [description, setDescription] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
-    const [address, setAddress] = useState('');
-    const [city, setCity] = useState('');
+    const [address, setAddress] = useState({
+        street: '',
+        city: '',
+        fullAddress: '',
+        lat: 0,
+        lng: 0
+    });
     const [website, setWebsite] = useState('');
-
-    // Generi musicali per definire il tema del locale
-    const [genres, setGenres] = useState<Genre[]>([]);
-    const [loadingGenres, setLoadingGenres] = useState(true);
-    const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
     // Social Networks
     const [socialNetworks, setSocialNetworks] = useState<SocialNetwork[]>([]);
@@ -45,8 +53,8 @@ const SignUpMerchant: React.FC = () => {
     const [selectedSocialNetworkProfiles, setSelectedSocialNetworkProfiles] = useState<{ [key: string]: string }>({});
 
     // Controllo disponibilità nome business
-    const [checkingBusinessName, setCheckingBusinessName] = useState(false);
-    const [businessNameAvailable, setBusinessNameAvailable] = useState<boolean | null>(null);
+    const [checkingBusinessName, setCheckingUsername] = useState(false);
+    const [businessNameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
 
     // Errori e stato submit
     const [error, setError] = useState('');
@@ -59,19 +67,84 @@ const SignUpMerchant: React.FC = () => {
     // Modal di registrazione completata
     const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
+    useEffect(() => {
+        const loadGoogleMaps = () => {
+            if (!window.google) {
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBz237WilseCi9Ghn-rENeDSUQtZGVut-s&libraries=places`;
+                script.async = true;
+                script.defer = true;
+                document.head.appendChild(script);
+
+                script.onload = () => {
+                    console.log('Google Maps API loaded');
+                };
+            }
+        };
+
+        loadGoogleMaps();
+    }, []);
+
+
+    //autocompletamento di google
+    const initAutocomplete = () => {
+        if (window.google && window.google.maps) {
+            const input = document.getElementById('autocomplete-address') as HTMLInputElement;
+            const autocomplete = new window.google.maps.places.Autocomplete(input, {
+                types: ['address'],
+                componentRestrictions: { country: 'it' }
+            });
+
+            autocomplete.addListener('place_changed', () => {
+                const place = autocomplete.getPlace();
+                if (!place.address_components) return;
+
+                let streetNumber = '';
+                let route = '';
+                let city = '';
+                let fullAddress = place.formatted_address || '';
+
+                place.address_components.forEach((component: { types: any; long_name: string; }) => {
+                    const types = component.types;
+                    if (types.includes('street_number')) {
+                        streetNumber = component.long_name;
+                    } else if (types.includes('route')) {
+                        route = component.long_name;
+                    } else if (types.includes('locality') || types.includes('administrative_area_level_3')) {
+                        city = component.long_name;
+                    } else if (types.includes('administrative_area_level_2')) {
+                        // Se non abbiamo trovato la città, usiamo il livello 2
+                        if (!city) city = component.long_name;
+                    }
+                });
+
+                setAddress({
+                    street: `${route} ${streetNumber}`.trim(),
+                    city,
+                    fullAddress,
+                    lat: place.geometry?.location?.lat() || 0,
+                    lng: place.geometry?.location?.lng() || 0
+                });
+            });
+        }
+    };
+
+    useEffect(() => {
+        const checkAPI = setInterval(() => {
+            if (window.google) {
+                clearInterval(checkAPI);
+                initAutocomplete();
+            }
+        }, 100);
+
+        return () => clearInterval(checkAPI);
+    }, []);
+
+
+
     // Fetch di tutti i dati al montaggio
     useEffect(() => {
         const fetchData = async () => {
-            try {
-                // Fetch generi musicali
-                const genresData = await RestApiUtilsMerchant.getGenres();
-                setGenres(genresData);
-            } catch (error) {
-                setError(error instanceof Error ? error.message : 'Errore nel caricamento dei generi');
-            } finally {
-                setLoadingGenres(false);
-            }
-
             try {
                 // Fetch social networks
                 const socialData = await RestApiUtilsMerchant.getSocialNetworks();
@@ -87,24 +160,24 @@ const SignUpMerchant: React.FC = () => {
     }, []);
 
     // Controllo disponibilità nome business
-    const checkBusinessName = async () => {
-        if (!businessName.trim()) return;
+    const checkUsername = async () => {
+        if (!username.trim()) return;
 
-        setCheckingBusinessName(true);
+        setCheckingUsername(true);
         setError('');
 
         try {
-            const isAvailable = await RestApiUtilsMerchant.checkBusinessNameAvailability(businessName);
-            setBusinessNameAvailable(isAvailable);
+            const isAvailable = await RestApiUtilsMerchant.checkBusinessNameAvailability(username);
+            setUsernameAvailable(isAvailable);
 
             if (!isAvailable) {
                 setError('Nome business non disponibile');
             }
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Errore nel controllo nome business');
-            setBusinessNameAvailable(null);
+            setUsernameAvailable(null);
         } finally {
-            setCheckingBusinessName(false);
+            setCheckingUsername(false);
         }
     };
 
@@ -118,13 +191,6 @@ const SignUpMerchant: React.FC = () => {
             reader.onload = () => setProfileImage(reader.result as string);
             reader.readAsDataURL(file);
         }
-    };
-
-    // Toggle selezione genere
-    const toggleGenre = (g: string) => {
-        setSelectedGenres(sel =>
-            sel.includes(g) ? sel.filter(x => x !== g) : [...sel, g]
-        );
     };
 
     // Toggle per i social network
@@ -142,7 +208,7 @@ const SignUpMerchant: React.FC = () => {
 
     // Validazione dei campi
     const validateForm = (): boolean => {
-        if (!businessName || !description || !email || !phone || !password || !address || !city) {
+        if (!username || !businessName || !description || !email || !phone || !password || !address.fullAddress) {
             setError('Tutti i campi obbligatori devono essere compilati');
             return false;
         }
@@ -157,11 +223,6 @@ const SignUpMerchant: React.FC = () => {
             return false;
         }
 
-        if (selectedGenres.length === 0) {
-            setError('Seleziona almeno un genere musicale per caratterizzare il tuo locale');
-            return false;
-        }
-
         return true;
     };
 
@@ -173,24 +234,38 @@ const SignUpMerchant: React.FC = () => {
             return;
         }
 
+        // Verifica che l'indirizzo sia completo
+        if (!address.fullAddress || !address.city) {
+            setError('Per favore, seleziona un indirizzo valido dalla lista');
+            return;
+        }
         setSubmitting(true);
 
         try {
-            const businessData = {
-                businessName,
-                description,
-                email,
-                phone,
+            // Combina indirizzo e città
+            const fullAddress = address.fullAddress + ', ' + address.lat.toFixed(6) +', ' +address.lng.toFixed(6);
+
+            // Prepara i dati per la registrazione
+            const registrationData = {
+                username,
+                merchantSurname: surname,
+                merchantName: businessName,
+                merchantDescription: description,
+                merchantEmail: email,
+                merchantPhone: phone,
                 password,
-                address,
-                city,
-                website
+                merchantAddress: fullAddress,
+                website,
+                socialNetworks: Object.entries(selectedSocialNetworkProfiles)
+                    .filter(([_, url]) => url.trim() !== '')
+                    .map(([platform, url]) => ({
+                        platform,
+                        profileUrl: url,
+                    })),
             };
 
             await RestApiUtilsMerchant.completeMerchantRegistration(
-                businessData,
-                selectedGenres,
-                selectedSocialNetworkProfiles,
+                registrationData,
                 imageFile
             );
 
@@ -257,19 +332,47 @@ const SignUpMerchant: React.FC = () => {
                             <p className="text-sm text-muted-foreground">Clicca per aggiungere foto del locale</p>
                         </div>
 
-                        {/* Nome business con controllo */}
-                        <div className="space-y-2">
-                            <Label htmlFor="businessName">Nome del locale *</Label>
-                            <div className="relative">
+                        {/* Username e Cognome */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="businessName">Nome *</Label>
                                 <Input
                                     id="businessName"
                                     value={businessName}
                                     onChange={e => {
                                         setBusinessName(e.target.value);
-                                        setBusinessNameAvailable(null);
+                                        setUsernameAvailable(null);
                                     }}
-                                    onBlur={checkBusinessName}
-                                    placeholder="Nome del tuo locale o venue"
+                                    
+                                    placeholder="Il tuo nome"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="surname">Cognome</Label>
+                                <Input
+                                    id="surname"
+                                    value={surname}
+                                    onChange={e => setSurname(e.target.value)}
+                                    placeholder="Il tuo cognome"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Nome business con controllo */}
+                        <div className="space-y-2">
+                            <Label htmlFor="username">Nome del locale *</Label>
+                            <div className="relative">
+                                <Input
+                                    id="username"
+                                    value={username}
+                                    onChange={e => {
+                                        setUsername(e.target.value);
+                                        setUsernameAvailable(null);
+
+                                    }}
+                                    onBlur={checkUsername}
+
+                                    placeholder="Nome del tuo locale"
                                     className={cn(
                                         businessNameAvailable === true && "border-green-500",
                                         businessNameAvailable === false && "border-red-500"
@@ -323,25 +426,19 @@ const SignUpMerchant: React.FC = () => {
                         </div>
 
                         {/* Indirizzo e Città */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="address">Indirizzo *</Label>
-                                <Input
-                                    id="address"
-                                    value={address}
-                                    onChange={e => setAddress(e.target.value)}
-                                    placeholder="Via, numero civico"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="city">Città *</Label>
-                                <Input
-                                    id="city"
-                                    value={city}
-                                    onChange={e => setCity(e.target.value)}
-                                    placeholder="Nome della città"
-                                />
-                            </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="autocomplete-address">Indirizzo completo *</Label>
+                            <Input
+                                id="autocomplete-address"
+                                value={address.fullAddress}
+                                onChange={(e) => setAddress({
+                                    ...address,
+                                    fullAddress: e.target.value
+                                })}
+                                placeholder="Inserisci l'indirizzo completo (via, città, CAP)"
+                                onFocus={initAutocomplete}
+                            />
+                          
                         </div>
 
                         {/* Website */}
@@ -366,45 +463,6 @@ const SignUpMerchant: React.FC = () => {
                                 onChange={e => setPassword(e.target.value)}
                                 placeholder="Crea una password sicura"
                             />
-                        </div>
-
-                        {/* Generi musicali */}
-                        <div className="space-y-4">
-                            <Label className="text-base font-medium">Generi musicali del locale *</Label>
-                            <p className="text-sm text-muted-foreground">Seleziona i generi che caratterizzano il tuo locale</p>
-                            {loadingGenres ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <Loader2 className="h-6 w-6 animate-spin" />
-                                    <span className="ml-2">Caricamento generi...</span>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                                    {genres.map(g => {
-                                        const isSelected = selectedGenres.includes(g.name);
-                                        return (
-                                            <div
-                                                key={g.name}
-                                                className={cn(
-                                                    "cursor-pointer p-3 rounded-lg text-center transition-all duration-200 border-2 hover:scale-105",
-                                                    isSelected
-                                                        ? "border-black shadow-lg font-bold"
-                                                        : "border-transparent hover:shadow-md"
-                                                )}
-                                                style={{
-                                                    backgroundColor: g.colorHex,
-                                                    color: getContrastingTextColor(g.colorHex),
-                                                }}
-                                                onClick={() => toggleGenre(g.name)}
-                                            >
-                                                <div className="flex flex-col items-center space-y-1">
-                                                    <span className="text-lg">{getGenreIcon(g.iconName)}</span>
-                                                    <span className="text-xs font-medium">{g.displayName}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
                         </div>
 
                         {/* Social Networks */}

@@ -17,6 +17,11 @@ import MyEvents from "./pages/sidebar/MyEvents"
 import SavedEvents from "./pages/sidebar/SavedEvents"
 import EventManagement from "./pages/sidebar/EventManagement"
 import ArtistManagement from "./pages/Dashboard/Admin/ArtistManagement"
+import NewEvent from "./pages/Dashboard/Artist/NewEvent"
+import MerchantManagement from "./pages/Dashboard/Admin/MerchantManagement"
+import AcceptEvent from "./pages/Dashboard/Merchant/AcceptEvent"
+import EventArtist from "./pages/Dashboard/Artist/EventArtist"
+import FakeEvent from "./pages/Events/FakeEvent"
 
 function App() {
   return (
@@ -36,11 +41,12 @@ function App() {
           <Route path="/artist/signup" element={<SignUpArtist />} />
           <Route path="/merchant/signup" element={<SignUpMerchant />} />
           <Route path="/events" element={<Catalogo />} />
+          <Route path="/fake-events" element={<FakeEvent />} />
 
 
 
           {/*Rotte dashboard*/ }
-          <Route path="/my-events" element={<MyEvents />} />
+          
           <Route path="/saved-events" element={<SavedEvents />} />
 
 
@@ -55,8 +61,15 @@ function App() {
             } 
           />
           */}
+
+          {/*Merchant*/}
+          
+           <Route path="/event-request" element={< AcceptEvent/>} />
           
           {/* Route per Artist */}
+
+          <Route path="/new-event" element={<NewEvent />}/>
+          <Route path="/artist/my-events" element={<EventArtist />} />
           {/*
           <Route 
             path="artist/dashboard" 
@@ -71,7 +84,8 @@ function App() {
 
          
           <Route path= "/event-management" element={<EventManagement />} />
-        <Route path= "/artist-management" element={<ArtistManagement />} /> {/* Admin */}
+        <Route path= "/artist-management" element={<ArtistManagement />} /> 
+          <Route path="/merchant-management" element={<MerchantManagement/>} />{/* Admin */}
           {/* Route per Admin */}
           {/*
           <Route 
