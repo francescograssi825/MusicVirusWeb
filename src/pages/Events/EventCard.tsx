@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Calendar, MapPin, User, Clock, DollarSign, Heart, ChevronLeft, ChevronRight, Play, Pause, Volume2, HandCoins } from 'lucide-react';
+import DonateModal from './DonateModal';
+import PaymentResultModal from './PaymentResultModal';
+import DonationProgressBar from './DonationProgressBar';
 
 interface Artist {
   id: string;
@@ -52,14 +55,19 @@ const EventCard: React.FC<EventCardProps> = ({
   onAccept,
   onReject,
   onToggleFavorite,
-  onDonate,
   isFavorite = false
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
-
+  const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
+  const [paymentResult, setPaymentResult] = useState<{
+    status: 'success' | 'error' | 'canceled';
+    message: string;
+  } | null>(null);
+ const [refreshTrigger, setRefreshTrigger] = useState(0);
+ 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('it-IT', {
       day: '2-digit',
@@ -70,9 +78,7 @@ const EventCard: React.FC<EventCardProps> = ({
     });
   };
 
-  const formatAmount = (amount: number) => {
-    return (amount / 100).toFixed(2);
-  };
+
 
   const getStateColor = (state: string) => {
     switch (state) {
@@ -159,6 +165,125 @@ const EventCard: React.FC<EventCardProps> = ({
     }
   };
 
+  const handleDonateClick = () => {
+    setIsDonateModalOpen(true);
+  };
+
+  const handleConfirmDonation = async (amount: number, visibility: boolean) => {
+    setIsDonateModalOpen(false);
+
+    try {
+      const username = localStorage.getItem('username') || '';
+
+      const paymentData = {
+        username,
+        visibility,
+        eventId: event.id,
+        amount: amount,
+        currency: "EUR"
+      };
+
+      const response = await fetch('http://localhost:8086/api/payments/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(paymentData)
+      });
+
+      const result = await response.json();
+      console.log(result);
+
+      if (result.approvalUrl) {
+        const paymentId = result.paymentId;
+        console.log("Current payment id", paymentId);
+
+        // Apri finestra PayPal
+        const paymentWindow = window.open(
+          result.approvalUrl,
+          'paypal_payment',
+          'width=600,height=700'
+        );
+
+        // Controllo stato pagamento più frequente
+        const checkPaymentStatus = setInterval(async () => {
+          try {
+            // Controlla lo stato del pagamento prima di verificare se la finestra è chiusa
+            const statusResponse = await fetch(`http://localhost:8086/api/payments/id/${paymentId}`);
+            const statusData = await statusResponse.json();
+
+            // Se il pagamento è completato (con successo o fallito)
+            if (statusResponse.ok && statusData.payment?.paypalPaymentId) {
+              // CHIUDI LA FINESTRA PAYPAL
+              if (paymentWindow && !paymentWindow.closed) {
+                paymentWindow.close();
+              }
+              
+              clearInterval(checkPaymentStatus);
+              setPaymentResult({
+                status: 'success',
+                message: 'Il tuo pagamento è stato completato con successo!'
+              });
+              return;
+            }
+
+            // Se il pagamento è fallito/cancellato e la finestra è ancora aperta
+            if (statusResponse.ok && statusData.payment && !statusData.payment.paypalPaymentId) {
+              // Controlla se è stato esplicitamente cancellato
+              if (statusData.payment.status === 'CANCELED' || statusData.payment.status === 'FAILED') {
+                if (paymentWindow && !paymentWindow.closed) {
+                  paymentWindow.close();
+                }
+                
+                clearInterval(checkPaymentStatus);
+                setPaymentResult({
+                  status: 'canceled',
+                  message: 'Il pagamento è stato annullato o è fallito'
+                });
+                return;
+              }
+            }
+
+            // Se la finestra è stata chiusa dall'utente
+            if (paymentWindow?.closed) {
+              clearInterval(checkPaymentStatus);
+              
+              // Verifica finale dello stato
+              const finalStatusResponse = await fetch(`http://localhost:8086/api/payments/id/${paymentId}`);
+              const finalStatusData = await finalStatusResponse.json();
+
+              if (finalStatusResponse.ok && finalStatusData.payment?.paypalPaymentId) {
+                setPaymentResult({
+                  status: 'success',
+                  message: 'Il tuo pagamento è stato completato con successo!'
+                });
+              } else {
+                setPaymentResult({
+                  status: 'canceled',
+                  message: 'Hai annullato il pagamento'
+                });
+              }
+            }
+             setRefreshTrigger(prev => prev + 1);
+          } catch (error) {
+            console.error('Errore durante il controllo dello stato:', error);
+            // In caso di errore, continua il controllo
+          }
+        }, 1000); // Controllo ogni secondo 
+
+        
+
+      } else {
+        throw new Error('URL di approvazione non disponibile');
+      }
+    } catch (error) {
+      setPaymentResult({
+        status: 'error',
+        message: 'Errore durante la creazione del pagamento: ' + (error as Error).message
+      });
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow">
       {/* Header */}
@@ -217,8 +342,9 @@ const EventCard: React.FC<EventCardProps> = ({
                     <button
                       key={index}
                       onClick={() => setCurrentImageIndex(index)}
-                      className={`w-2 h-2 rounded-full transition-all ${index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
-                        }`}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
+                      }`}
                     />
                   ))}
                 </div>
@@ -288,8 +414,9 @@ const EventCard: React.FC<EventCardProps> = ({
                       setCurrentAudioIndex(index);
                       stopAudio();
                     }}
-                    className={`w-2 h-2 rounded-full transition-all ${index === currentAudioIndex ? 'bg-blue-600' : 'bg-blue-300'
-                      }`}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      index === currentAudioIndex ? 'bg-blue-600' : 'bg-blue-300'
+                    }`}
                   />
                 ))}
               </div>
@@ -300,8 +427,6 @@ const EventCard: React.FC<EventCardProps> = ({
 
       {/* Description */}
       <p className="text-gray-600 mb-4">{event.description}</p>
-
-
 
       {/* Artist Info */}
       <div className="flex items-center mb-3">
@@ -317,18 +442,14 @@ const EventCard: React.FC<EventCardProps> = ({
         <span className="text-sm text-gray-600">
           Locale: <span className="font-medium">{event.merchant.merchantName}</span> - {event.merchant.merchantAddress}
         </span>
-
       </div>
+
       <div className="flex items-center mb-3">
         <HandCoins className="w-4 h-4 text-gray-400 mr-2" />
         <span className="text-sm text-gray-600">
           Offerta: <span className="font-medium">{event.merchant.merchantOffers}</span>
         </span>
-
       </div>
-
-
-
 
       {/* Event Date */}
       <div className="flex items-center mb-3">
@@ -347,12 +468,11 @@ const EventCard: React.FC<EventCardProps> = ({
       </div>
 
       {/* Amount */}
-      <div className="flex items-center mb-4">
-        <DollarSign className="w-4 h-4 text-gray-400 mr-2" />
-        <span className="text-sm text-gray-600">
-          Obiettivo: <span className="font-medium text-green-600">€{formatAmount(event.amount)}</span>
-        </span>
-      </div>
+      <DonationProgressBar 
+        eventId={event.id}
+        targetAmount={event.amount}
+        refreshTrigger={refreshTrigger}
+      />
 
       {/* Genres */}
       <div className="mb-4">
@@ -386,15 +506,38 @@ const EventCard: React.FC<EventCardProps> = ({
         </div>
       )}
 
+      {/* Donate button */}
       {showUserActions && event.eventState === 'APPROVED' && (
         <div className="flex gap-3 pt-4 border-t border-gray-200">
           <button
-            onClick={() => onDonate?.(event.id)}
+            onClick={handleDonateClick}
             className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
           >
             Dona
           </button>
         </div>
+      )}
+
+      {/* Donation Modal */}
+      {isDonateModalOpen && (
+        <DonateModal
+          eventId={event.id}
+          onClose={() => setIsDonateModalOpen(false)}
+          onConfirm={handleConfirmDonation}
+        />
+      )}
+
+      {/* Payment Result Modal */}
+    {paymentResult && (
+        <PaymentResultModal
+          status={paymentResult.status}
+          message={paymentResult.message}
+          onClose={() => {
+            setPaymentResult(null);
+            // Triggera un aggiornamento quando si chiude il modal
+            setRefreshTrigger(prev => prev + 1);
+          }}
+        />
       )}
     </div>
   );
