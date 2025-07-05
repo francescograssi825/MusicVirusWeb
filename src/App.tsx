@@ -14,7 +14,6 @@ import SignUpFan from "./pages/Registration/SignUp"
 import { AuthProvider } from "./components/auth/AuthContext"
 import Catalogo from "./pages/Events/Catalogo"
 import MyEvents from "./pages/sidebar/MyEvents"
-import SavedEvents from "./pages/sidebar/SavedEvents"
 import EventManagement from "./pages/sidebar/EventManagement"
 import ArtistManagement from "./pages/Dashboard/Admin/ArtistManagement"
 import NewEvent from "./pages/Dashboard/Artist/NewEvent"
@@ -45,9 +44,9 @@ function App() {
 
 
 
-          {/*Rotte dashboard*/ }
+         
           
-          <Route path="/saved-events" element={<SavedEvents />} />
+          
 
 
             {/* Route per Fan */}

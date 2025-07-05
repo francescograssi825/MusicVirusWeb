@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Calendar, MapPin, User, Clock, DollarSign, Heart, ChevronLeft, ChevronRight, Play, Pause, Volume2, HandCoins } from 'lucide-react';
+import { Calendar, MapPin, User, Clock, HandCoins } from 'lucide-react';
 import DonateModal from './DonateModal';
 import PaymentResultModal from './PaymentResultModal';
 import DonationProgressBar from './DonationProgressBar';
+import ImageCarousel from './ImageCarousel';
+import AudioCarousel from './AudioCarousel';
+import InfoModal from './InfoModal';
 
 interface Artist {
   id: string;
@@ -54,14 +57,13 @@ const EventCard: React.FC<EventCardProps> = ({
   showUserActions = false,
   onAccept,
   onReject,
-  onToggleFavorite,
-  isFavorite = false
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [paymentResult, setPaymentResult] = useState<{
     status: 'success' | 'error' | 'canceled';
     message: string;
@@ -165,8 +167,17 @@ const EventCard: React.FC<EventCardProps> = ({
     }
   };
 
+  const selectAudio = (index: number) => {
+  setCurrentAudioIndex(index);
+  stopAudio();
+};
+
   const handleDonateClick = () => {
     setIsDonateModalOpen(true);
+  };
+
+   const handleInfoClick = () => {
+    setIsInfoModalOpen(true);
   };
 
   const handleConfirmDonation = async (amount: number, visibility: boolean) => {
@@ -294,135 +305,30 @@ const EventCard: React.FC<EventCardProps> = ({
             {getStateText(event.eventState)}
           </span>
         </div>
-        {showUserActions && (
-          <button
-            onClick={() => onToggleFavorite?.(event.id)}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          >
-            {isFavorite ? (
-              <Heart className="w-6 h-6 text-red-500 fill-current" />
-            ) : (
-              <Heart className="w-6 h-6 text-gray-400" />
-            )}
-          </button>
-        )}
       </div>
 
       {/* Images Carousel */}
       {event.pictures && event.pictures.length > 0 && (
-        <div className="mb-4">
-          <div className="relative bg-gray-100 rounded-lg overflow-hidden aspect-video">
-            <img
-              src={event.pictures[currentImageIndex]}
-              alt={`${event.name} - Immagine ${currentImageIndex + 1}`}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5YTNhZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltbWFnaW5lIG5vbiBkaXNwb25pYmlsZTwvdGV4dD48L3N2Zz4=';
-              }}
-            />
-
-            {event.pictures.length > 1 && (
-              <>
-                <button
-                  onClick={prevImage}
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={nextImage}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-
-                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                  {event.pictures.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentImageIndex(index)}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <ImageCarousel
+          pictures={event.pictures}
+          currentImageIndex={currentImageIndex}
+          onPrev={prevImage}
+          onNext={nextImage}
+          onSelectImage={setCurrentImageIndex}
+        />
       )}
 
       {/* Audio Samples Carousel */}
       {event.sample && event.sample.length > 0 && (
-        <div className="mb-4">
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center">
-                <Volume2 className="w-4 h-4 text-blue-600 mr-2" />
-                <span className="text-sm font-medium text-blue-900">
-                  Sample Audio {currentAudioIndex + 1} di {event.sample.length}
-                </span>
-              </div>
-              {event.sample.length > 1 && (
-                <div className="flex space-x-1">
-                  <button
-                    onClick={prevAudio}
-                    className="p-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={nextAudio}
-                    className="p-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={toggleAudio}
-                className="flex items-center justify-center w-10 h-10 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
-              >
-                {isPlaying ? (
-                  <Pause className="w-5 h-5" />
-                ) : (
-                  <Play className="w-5 h-5 ml-0.5" />
-                )}
-              </button>
-
-              <div className="flex-1">
-                <div className="text-sm text-blue-800 font-medium">
-                  {event.sample[currentAudioIndex].split('/').pop()?.split('.')[0] || `Audio ${currentAudioIndex + 1}`}
-                </div>
-                <div className="text-xs text-blue-600">
-                  {isPlaying ? 'In riproduzione...' : 'Clicca per ascoltare'}
-                </div>
-              </div>
-            </div>
-
-            {event.sample.length > 1 && (
-              <div className="flex justify-center mt-3 space-x-1">
-                {event.sample.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      setCurrentAudioIndex(index);
-                      stopAudio();
-                    }}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      index === currentAudioIndex ? 'bg-blue-600' : 'bg-blue-300'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <AudioCarousel
+          samples={event.sample}
+          currentAudioIndex={currentAudioIndex}
+          isPlaying={isPlaying}
+          onPrev={prevAudio}
+          onNext={nextAudio}
+          onTogglePlay={toggleAudio}
+          onSelectAudio={selectAudio}
+        />
       )}
 
       {/* Description */}
@@ -437,19 +343,23 @@ const EventCard: React.FC<EventCardProps> = ({
       </div>
 
       {/* Merchant Info */}
+      {!showUserActions  && (
       <div className="flex items-center mb-3">
         <MapPin className="w-4 h-4 text-gray-400 mr-2" />
         <span className="text-sm text-gray-600">
           Locale: <span className="font-medium">{event.merchant.merchantName}</span> - {event.merchant.merchantAddress}
         </span>
       </div>
+      )}
 
+      {!showUserActions  && (
       <div className="flex items-center mb-3">
         <HandCoins className="w-4 h-4 text-gray-400 mr-2" />
         <span className="text-sm text-gray-600">
           Offerta: <span className="font-medium">{event.merchant.merchantOffers}</span>
         </span>
       </div>
+      )}
 
       {/* Event Date */}
       <div className="flex items-center mb-3">
@@ -459,13 +369,16 @@ const EventCard: React.FC<EventCardProps> = ({
         </span>
       </div>
 
+
       {/* Fundraising End Date */}
+      {!showUserActions  && (
       <div className="flex items-center mb-3">
         <Clock className="w-4 h-4 text-gray-400 mr-2" />
         <span className="text-sm text-gray-600">
           Fine raccolta fondi: <span className="font-medium">{formatDate(event.endFundraisingDate)}</span>
         </span>
       </div>
+      )}
 
       {/* Amount */}
       <DonationProgressBar 
@@ -515,6 +428,12 @@ const EventCard: React.FC<EventCardProps> = ({
           >
             Dona
           </button>
+          <button
+            onClick={handleInfoClick}
+            className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors font-medium"
+          >
+            Informazioni
+          </button>
         </div>
       )}
 
@@ -524,6 +443,14 @@ const EventCard: React.FC<EventCardProps> = ({
           eventId={event.id}
           onClose={() => setIsDonateModalOpen(false)}
           onConfirm={handleConfirmDonation}
+        />
+      )}
+
+      {/* Info Modal */}
+      {isInfoModalOpen && (
+        <InfoModal
+          event={event}
+          onClose={() => setIsInfoModalOpen(false)}
         />
       )}
 

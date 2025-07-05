@@ -80,7 +80,7 @@ const NewEvent: React.FC = () => {
   // Campi evento
   const [eventName, setEventName] = useState('');
   const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState<number>(0);
+  const [amount, setAmount] = useState<string>('');
   const [eventDate, setEventDate] = useState('');
   const [minEventDate] = useState(calculateMinEventDate());
 
@@ -274,7 +274,15 @@ const NewEvent: React.FC = () => {
       return false;
     }
 
-    if (amount <= 0) {
+    const sanitizedAmount = amount.replace(',', '.');
+    const amountValue = parseFloat(sanitizedAmount);
+    // Validazione
+    if (isNaN(amountValue)) {
+      setError('Inserisci un importo valido');
+      return false;
+    }
+    
+    if (amountValue <= 0) {
       setError('L\'importo deve essere maggiore di zero');
       return false;
     }
@@ -433,7 +441,7 @@ const NewEvent: React.FC = () => {
           merchantOffers: selectedMerchant.merchantOffers,
           email: selectedMerchant.email
         },
-        amount: amount.toString(),
+        amount: (parseFloat(amount.replace(',', '.')) *100).toString(),   //amount.toString(),
         eventDate: eventDate,
         endFundraisingDate: endFundraisingDate,
         pictures: uploadedPictures,
@@ -525,11 +533,9 @@ const NewEvent: React.FC = () => {
                   <Label htmlFor="amount">Importo Target (€) *</Label>
                   <Input
                     id="amount"
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    type="text"
                     value={amount}
-                    onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
                   />
                 </div>

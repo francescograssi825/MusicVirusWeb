@@ -1,4 +1,5 @@
 // EventsCard.tsx
+
 import React from "react";
 import { useState } from "react";
 import { Heart, Calendar, MapPin, Music, Trash2, Users } from "lucide-react";
