@@ -40,7 +40,7 @@ interface EventsResponse {
   events: Event[];
 }
 
-const EventArtist: React.FC = () => {
+const EventAdmin: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,11 +50,9 @@ const EventArtist: React.FC = () => {
     const fetchEvents = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('authToken');
-        const response = await fetch('http://localhost:8085/event/artist/get-events', {
+        const response = await fetch('http://localhost:8085/api/event/get-all-catalog', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
         });
@@ -107,11 +105,11 @@ const EventArtist: React.FC = () => {
           <div className="flex items-center mb-4">
             <Music className="w-8 h-8 text-blue-600 mr-3" />
             <h1 className="text-3xl font-bold text-gray-900">
-              I Miei Eventi
+             Eventi
             </h1>
           </div>
           <p className="text-gray-600">
-            Visualizza tutti i tuoi eventi musicali e il loro stato
+            Visualizza tutti gli eventi musicali e il loro stato
           </p>
         </div>
 
@@ -264,4 +262,4 @@ const EventArtist: React.FC = () => {
   );
 };
 
-export default EventArtist;
+export default EventAdmin;

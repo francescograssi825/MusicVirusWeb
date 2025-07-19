@@ -40,7 +40,7 @@ interface EventsResponse {
   events: Event[];
 }
 
-const EventArtist: React.FC = () => {
+const EventMerchant: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +51,7 @@ const EventArtist: React.FC = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('authToken');
-        const response = await fetch('http://localhost:8085/event/artist/get-events', {
+        const response = await fetch('http://localhost:8085/event/merchant/get-events', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -264,4 +264,4 @@ const EventArtist: React.FC = () => {
   );
 };
 
-export default EventArtist;
+export default EventMerchant;

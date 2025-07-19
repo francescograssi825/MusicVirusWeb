@@ -6,6 +6,10 @@ import DonationProgressBar from './DonationProgressBar';
 import ImageCarousel from './ImageCarousel';
 import AudioCarousel from './AudioCarousel';
 import InfoModal from './InfoModal';
+import CommentModal from './CommentsModal';
+import ReportModal from './ReportModal';
+import { Button } from "../../components/ui/button";
+import OffertModal from './OffertModal';
 
 interface Artist {
   id: string;
@@ -20,6 +24,12 @@ interface Merchant {
   merchantDescription: string;
   merchantOffers: any;
   email: string;
+}
+
+interface Comment {
+  id: string;
+  text: string;
+  timestamp: string;
 }
 
 interface Event {
@@ -38,6 +48,7 @@ interface Event {
   eventState: string;
   creatorToken: string | null;
   creator: any;
+  comments?: Comment[];
 }
 
 interface EventCardProps {
@@ -49,7 +60,11 @@ interface EventCardProps {
   onToggleFavorite?: (eventId: string) => void;
   onDonate?: (eventId: string) => void;
   isFavorite?: boolean;
+  currentDate: Date; // data corrente
+  onCommentSubmit: (eventId: string, comment: string) => void;
 }
+
+
 
 const EventCard: React.FC<EventCardProps> = ({
   event,
@@ -57,6 +72,7 @@ const EventCard: React.FC<EventCardProps> = ({
   showUserActions = false,
   onAccept,
   onReject,
+  currentDate,
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
@@ -64,12 +80,101 @@ const EventCard: React.FC<EventCardProps> = ({
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  
   const [paymentResult, setPaymentResult] = useState<{
     status: 'success' | 'error' | 'canceled';
     message: string;
   } | null>(null);
+
  const [refreshTrigger, setRefreshTrigger] = useState(0);
- 
+  const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [isUpdateOfferDialogOpen, setIsUpdateOfferDialogOpen] = useState(false);
+  const [commentError, setCommentError] = useState("");
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+
+  const isEventEnded = () => {
+    const eventDate = new Date(event.eventDate);
+    const yesterday = new Date(currentDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return eventDate < yesterday;
+  };
+
+  const isMerchant = () => {
+
+    type UserType = "user" | "artist" | "merchant" | "admin";
+
+    const storedUserType =
+  typeof localStorage !== "undefined"
+    ? localStorage.getItem("role")
+    : null;
+
+    const currentUserType: UserType = storedUserType
+      ? (storedUserType.toLowerCase() as UserType)
+      : "user";
+
+    if (currentUserType === "merchant"){
+      return true;
+    }
+    return false;
+  }
+
+
+  // Gestiione invio del commento
+const handleCommentSubmit = async (commentText: string) => {
+  if (!commentText.trim()) {
+    setCommentError("Il commento non può essere vuoto");
+    return;
+  }
+
+  setIsSubmittingComment(true);
+  setCommentError("");
+
+  try {
+    // Recupera il token di autenticazione
+    const token = localStorage.getItem('authToken') || '';
+    if (!token) {
+      throw new Error('Utente non autenticato');
+    }
+
+    // Effettua la chiamata POST per inviare il commento
+    const response = await fetch('http://localhost:8085/comment/add', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        eventId: event.id,
+        message: commentText,
+        eventName: event.name
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Errore nell'invio del commento");
+    }
+
+   
+    const newComment = await response.json();
+    
+   
+    const updatedEvent = {
+      ...event,
+      comments: [...(event.comments || []), newComment]
+    };
+    
+    
+
+    setIsCommentDialogOpen(false);
+  } catch (err) {
+    setCommentError(err instanceof Error ? err.message : "Errore nell'invio del commento");
+  } finally {
+    setIsSubmittingComment(false);
+  }
+};
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('it-IT', {
       day: '2-digit',
@@ -466,6 +571,87 @@ const EventCard: React.FC<EventCardProps> = ({
           }}
         />
       )}
+
+
+      {isMerchant() && !isEventEnded() &&(
+        <div className="mt-4 pt-4 border-t border-gray-200">
+         
+
+          <div className="flex gap-3 mt-4">
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              onClick={() => setIsUpdateOfferDialogOpen(true)}
+            >
+              Modifica offerta
+            </Button>
+          
+          </div>
+        </div>
+      )}
+    
+
+{/* {true && (    per i test*/ }
+  {isEventEnded() && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <h4 className="font-medium mb-2">Commenti e segnalazioni:</h4>
+          {event.comments?.length ? (
+            <div className="space-y-3">
+              {event.comments.map(comment => (
+                <div key={comment.id} className="text-sm bg-gray-50 p-3 rounded-md">
+                  <p className="text-gray-700">{comment.text}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {new Date(comment.timestamp).toLocaleString('it-IT')}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm">Nessun commento ancora</p>
+          )}
+
+          <div className="flex gap-3 mt-4">
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              onClick={() => setIsCommentDialogOpen(true)}
+            >
+              Aggiungi commento
+            </Button>
+            <Button 
+              variant="outline" 
+              className="flex-1 bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+              onClick={() => setIsReportModalOpen(true)}
+            >
+              Segnala
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Modali */}
+      <CommentModal
+        isOpen={isCommentDialogOpen}
+        onClose={() => setIsCommentDialogOpen(false)}
+        onSubmit={handleCommentSubmit}
+        isSubmitting={isSubmittingComment}
+        error={commentError}
+      />
+
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        eventId={event.id}
+        eventName={event.name}
+      />
+
+      <OffertModal
+      isOpen={isUpdateOfferDialogOpen}
+        onClose={() => setIsUpdateOfferDialogOpen(false)}
+        eventId={event.id}
+        eventName={event.name}
+      />
+
     </div>
   );
 };

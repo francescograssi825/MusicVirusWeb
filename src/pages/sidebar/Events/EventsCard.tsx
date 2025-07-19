@@ -25,6 +25,8 @@ import {
     AlertDialogTrigger
 } from "../../../components/ui/alert-dialog";
 
+
+
 export interface EventData {
     id: number;
     title: string;

@@ -32,6 +32,18 @@ interface ArtistRegistrationData {
   address?: string;
 }
 
+interface ArtistProfileResponse {
+  id: string;
+  username: string;
+  bio: string;
+  email: string;
+  phone: string;
+  profileImageUrl: string;
+  genres: string[];
+  socialNetworks: { network: string; profileUrl: string }[];
+  streamingPlatforms: { platform: string; profileUrl: string }[];
+}
+
 class RestApiUtilsArtist {
   
   // Fetch generi musicali
@@ -125,6 +137,128 @@ class RestApiUtilsArtist {
     }
   }
 
+  static async getArtistProfile(artistId: string): Promise<ArtistProfileResponse> {
+  try {
+    const response = await fetch(`${invokeUrl}/api/artist/${artistId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    throw new Error('Errore nel caricamento del profilo artista');
+  }
+}
+
+// Aggiorna il profilo dell'artista
+static async updateArtistProfile(
+  artistId: string,
+  updateData: {
+    bio?: string;
+    genres?: string[];
+    socialNetworks?: { [key: string]: string };
+    streamingPlatforms?: { [key: string]: string };
+  },
+  imageFile: File | null
+): Promise<void> {
+  try {
+    // Upload nuova immagine se presente
+    let imageUrl = '';
+    if (imageFile) {
+      imageUrl = await this.uploadProfileImage(imageFile, artistId);
+    }
+
+    // Prepara i dati per l'aggiornamento
+    const updatePayload = {
+      ...updateData,
+      ...(imageUrl && { profileImageUrl: imageUrl }),
+      socialNetworks: updateData.socialNetworks 
+        ? Object.entries(updateData.socialNetworks).map(([network, url]) => ({
+            network,
+            profileUrl: url
+          }))
+        : [],
+      streamingPlatforms: updateData.streamingPlatforms 
+        ? Object.entries(updateData.streamingPlatforms).map(([platform, url]) => ({
+            platform,
+            profileUrl: url
+          }))
+        : []
+    };
+
+    // Invia richiesta di aggiornamento
+    const response = await fetch(`${invokeUrl}/api/artist/${artistId}`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(updatePayload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Errore durante l\'aggiornamento');
+    }
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'Errore durante l\'aggiornamento');
+  }
+}
+
+static async getArtistData(token: string): Promise<any> {
+  const response = await fetch(`${invokeUrl}/api/artist/getData`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Errore nel caricamento dei dati artista');
+  }
+
+  return response.json();
+}
+
+// Per aggiornare l'artista
+static async updateArtist(
+  artistId: number,
+  personalData: any,
+  selectedGenres: string[],
+  socialProfiles: { [key: string]: string },
+  platformProfiles: { [key: string]: string },
+  imageFile: File | null,
+  token: string
+): Promise<void> {
+  
+  const formData = new FormData();
+  
+  // Aggiungi i dati testuali
+  formData.append('data', JSON.stringify({
+    ...personalData,
+    genres: selectedGenres,
+    socialNetworks: socialProfiles,
+    streamingPlatforms: platformProfiles
+  }));
+  
+  // Aggiungi l'immagine se presente
+  if (imageFile) {
+    formData.append('image', imageFile);
+  }
+
+  const response = await fetch(`${invokeUrl}/api/artist/update/${artistId}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    body: formData
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Errore durante l\'aggiornamento');
+  }
+}
   // Registrazione artista completa
   static async completeArtistRegistration(
     personalData: ArtistRegistrationData,
@@ -196,6 +330,11 @@ class RestApiUtilsArtist {
       throw new Error(error instanceof Error ? error.message : 'Errore durante la registrazione');
     }
   }
+
+
+
+
+  
 }
 
 export default RestApiUtilsArtist;
