@@ -27,11 +27,14 @@ import AdminEarningsDashboard from "./pages/Dashboard/Admin/EarningAdmin"
 import Reports from "./pages/Dashboard/Admin/Reports"
 import EventAdmin from "./pages/Dashboard/Admin/EventAdmin"
 import EventMerchant from "./pages/Dashboard/Merchant/EventMerchant"
+import { Toaster } from "react-hot-toast"
 
 function App() {
   return (
+    
     <Router>
       <AuthProvider>
+      <Toaster position="top-right" />
       <Routes>
         <Route path="/" element={<Layout />}>
 

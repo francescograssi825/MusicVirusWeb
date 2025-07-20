@@ -10,6 +10,7 @@ import CommentModal from './CommentsModal';
 import ReportModal from './ReportModal';
 import { Button } from "../../components/ui/button";
 import OffertModal from './OffertModal';
+import { toast } from 'react-hot-toast';
 
 interface Artist {
   id: string;
@@ -80,6 +81,8 @@ const EventCard: React.FC<EventCardProps> = ({
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [isRequestingTicket, setIsRequestingTicket] = useState(false);
+  const [ticketError, setTicketError] = useState("");
   
   const [paymentResult, setPaymentResult] = useState<{
     status: 'success' | 'error' | 'canceled';
@@ -99,6 +102,105 @@ const EventCard: React.FC<EventCardProps> = ({
     const yesterday = new Date(currentDate);
     yesterday.setDate(yesterday.getDate() - 1);
     return eventDate < yesterday;
+  };
+
+    const shouldShowTicketButton = () => {
+    if (event.eventState !== 'APPROVED') {
+      return false;
+    }
+
+    const currentDateTime = currentDate.getTime();
+    const fundraisingEndDate = new Date(event.endFundraisingDate).getTime();
+    const eventEndDate = new Date(event.eventDate).getTime() + 2 * 60 * 60 * 1000; // +2 ore
+
+    return (
+      currentDateTime > fundraisingEndDate && 
+      currentDateTime < eventEndDate
+    );
+  };
+
+  const handleTicketRequest = async () => {
+    setIsRequestingTicket(true);
+    setTicketError("");
+    
+    try {
+      // Recupera il token di autenticazione
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Utente non autenticato');
+      }
+
+      // Recupera email utente
+      const emailResponse = await fetch('http://localhost:8081/api/fan/get-email', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!emailResponse.ok) {
+        throw new Error('Errore nel recupero della mail');
+      }
+      const emailData = await emailResponse.json();
+      const userEmail = emailData.email;
+
+      // Recupera nome utente
+      const nameResponse = await fetch('http://localhost:8081/api/fan/get-name', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!nameResponse.ok) {
+        throw new Error('Errore nel recupero del nome');
+      }
+      const nameData = await nameResponse.json();
+      const userName = nameData.name;
+
+      // Formatta la data per la richiesta (YYYY-MM-DD)
+      const eventDate = new Date(event.eventDate);
+      const formattedDate = `${eventDate.getFullYear()}-${(eventDate.getMonth() + 1).toString().padStart(2, '0')}-${eventDate.getDate().toString().padStart(2, '0')}`;
+
+      // Prepara il corpo della richiesta
+      const ticketData = {
+        eventName: event.name,
+        date: formattedDate,
+        ownerName: userName,
+        location: event.merchant.merchantAddress,
+        imagePath: event.pictures.length > 0 ? event.pictures[0] : "https://www.altrasoluzione.com/images/blog/siti-per-scaricare-immagini-gratis-legalmente/immagini-gratis-big.jpg",
+        listEmailDto: {
+          emails: [
+            { emailTo: userEmail }
+          ]
+        }
+      };
+
+      // Invia la richiesta per il biglietto
+      const ticketResponse = await fetch('http://localhost:8083/pdf/getTicket', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(ticketData)
+      });
+
+      if (!ticketResponse.ok) {
+        const errorData = await ticketResponse.json();
+        throw new Error(errorData.message || "Errore nella richiesta del biglietto");
+      }
+
+      // Mostra notifica di successo
+      toast.success("Biglietto richiesto con successo! Controlla la tua email.");
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Errore sconosciuto";
+      setTicketError(errorMessage);
+      toast.error(`Errore: ${errorMessage}`);
+    } finally {
+      setIsRequestingTicket(false);
+    }
   };
 
   const isMerchant = () => {
@@ -541,6 +643,18 @@ const handleCommentSubmit = async (commentText: string) => {
           </button>
         </div>
       )}
+       {/* Bottone Richiedi biglietto */}
+          {shouldShowTicketButton() && (
+            <button
+              onClick={handleTicketRequest}
+              disabled={isRequestingTicket}
+              className={`flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium ${
+                isRequestingTicket ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
+            >
+              {isRequestingTicket ? 'Invio in corso...' : 'Richiedi biglietto'}
+            </button>
+          )}
 
       {/* Donation Modal */}
       {isDonateModalOpen && (
@@ -626,8 +740,11 @@ const handleCommentSubmit = async (commentText: string) => {
               Segnala
             </Button>
           </div>
+         
         </div>
       )}
+
+      
 
       {/* Modali */}
       <CommentModal
